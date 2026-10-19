@@ -7,6 +7,7 @@
   --text: #1b1b19;
   --muted: #64645e;
   --accent: #2f5bd3;
+  --on-accent: #fff;
   --ok: #1f7a3f;
   --warn: #9a5b00;
   --danger: #b42318;
@@ -26,6 +27,7 @@
     --text: #ececea;
     --muted: #a3a39c;
     --accent: #8aa8ff;
+    --on-accent: #0b1020;
     --ok: #6fcf8f;
     --warn: #f0b252;
     --danger: #ff8a7a;
@@ -87,7 +89,7 @@ h2 {
 .button--primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .button--primary:hover {

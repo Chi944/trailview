@@ -86,21 +86,17 @@ export function Timeline({ run, groups, collapsed, selectedId, onSelect, onOpen,
         const isCollapsed = collapsed.includes(group.key)
         const headingId = `group-${group.key}`
         return (
-          <div key={group.key} role="group" aria-labelledby={headingId} className="step">
-            <div className="step__header">
-              <button
-                type="button"
-                className="step__toggle"
-                tabIndex={-1}
-                aria-expanded={!isCollapsed}
-                onClick={() => onCollapse(group.key, !isCollapsed)}
-              >
-                <span aria-hidden="true">{isCollapsed ? '▸' : '▾'}</span>
+          <div key={group.key} role="group" aria-labelledby={headingId} aria-describedby={`${headingId}-meta`} className="step">
+            {/* A listbox may only own groups and options, so the header is mouse-only; keyboard users collapse with ←/→. */}
+            <div className="step__header" aria-hidden="true">
+              <div className="step__toggle" onClick={() => onCollapse(group.key, !isCollapsed)}>
+                <span>{isCollapsed ? '▸' : '▾'}</span>
                 <span id={headingId} className="step__title">
                   {group.step !== undefined ? `Step ${group.step}` : 'Run'}
                 </span>
-              </button>
-              <span className="step__meta muted">
+              </div>
+              <span id={`${headingId}-meta`} className="step__meta muted">
+                {isCollapsed && 'Collapsed · '}
                 {group.items.length < group.total ? `${group.items.length} of ${group.total} events` : `${group.total} event${group.total === 1 ? '' : 's'}`}
                 {group.endMs > group.startMs && ` · ${formatDuration(group.endMs - group.startMs)}`}
                 {group.inputTokens + group.outputTokens > 0 &&
