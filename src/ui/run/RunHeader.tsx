@@ -7,9 +7,10 @@ interface Props {
   runIndex: number
   onSelectRun: (index: number) => void
   onClose: () => void
+  onHelp: () => void
 }
 
-export function RunHeader({ fileName, runs, runIndex, onSelectRun, onClose }: Props) {
+export function RunHeader({ fileName, runs, runIndex, onSelectRun, onClose, onHelp }: Props) {
   const run = runs[runIndex]
   return (
     <header className="run-header">
@@ -36,6 +37,9 @@ export function RunHeader({ fileName, runs, runIndex, onSelectRun, onClose }: Pr
             </select>
           </label>
         )}
+        <button type="button" className="button" onClick={onHelp} aria-label="Keyboard shortcuts">
+          ?
+        </button>
         <button type="button" className="button" onClick={onClose}>
           Close file
         </button>

@@ -1,15 +1,43 @@
-import { useReducer } from 'react'
+import { useMemo, useReducer, useState } from 'react'
 import { FilePicker } from './import/FilePicker.tsx'
 import { IssuesPanel } from './import/IssuesPanel.tsx'
 import { SampleMenu } from './import/SampleMenu.tsx'
 import { RunHeader } from './run/RunHeader.tsx'
 import { TotalsBar } from './run/TotalsBar.tsx'
+import { FilterBar, SEARCH_INPUT_ID } from './run/FilterBar.tsx'
+import { Timeline } from './timeline/Timeline.tsx'
+import { groupItems } from './timeline/groups.ts'
+import { ShortcutHelp } from './a11y/ShortcutHelp.tsx'
+import { useGlobalKeys } from './a11y/useGlobalKeys.ts'
 import { initialState, reducer } from './state.ts'
+
+const TIMELINE_SELECTOR = '.timeline'
 
 export function App() {
   const [state, dispatch] = useReducer(reducer, initialState)
+  const [helpOpen, setHelpOpen] = useState(false)
   const load = (name: string, text: string) => dispatch({ type: 'loaded', name, text })
   const onError = (message: string) => dispatch({ type: 'loadFailed', message })
+
+  const run = state.file?.runs[state.runIndex]
+  const groups = useMemo(() => (run ? groupItems(run.items, state.filters) : []), [run, state.filters])
+  const shown = groups.reduce((n, g) => n + g.items.length, 0)
+
+  const keys = useMemo(
+    () => ({
+      '?': () => setHelpOpen((open) => !open),
+      '/': () => document.getElementById(SEARCH_INPUT_ID)?.focus(),
+      t: () => document.querySelector<HTMLElement>(TIMELINE_SELECTOR)?.focus(),
+      e: () => dispatch({ type: 'setErrorsOnly', value: !state.filters.errorsOnly }),
+      Escape: () => {
+        if (helpOpen) setHelpOpen(false)
+        else if (state.detailOpen) dispatch({ type: 'closeDetail' })
+        else if (document.activeElement?.id === SEARCH_INPUT_ID) document.querySelector<HTMLElement>(TIMELINE_SELECTOR)?.focus()
+      },
+    }),
+    [helpOpen, state.detailOpen, state.filters.errorsOnly],
+  )
+  useGlobalKeys(keys, state.file !== undefined)
 
   if (!state.file) {
     return (
@@ -28,7 +56,6 @@ export function App() {
   }
 
   const { file, runIndex } = state
-  const run = file.runs[runIndex]
   return (
     <main className="viewer">
       <RunHeader
@@ -37,9 +64,35 @@ export function App() {
         runIndex={runIndex}
         onSelectRun={(index) => dispatch({ type: 'selectRun', index })}
         onClose={() => dispatch({ type: 'close' })}
+        onHelp={() => setHelpOpen(true)}
       />
       <IssuesPanel issues={file.issues} />
-      {run ? <TotalsBar totals={run.totals} /> : <p className="muted">No readable events in this file.</p>}
+      {run ? (
+        <>
+          <TotalsBar totals={run.totals} />
+          <FilterBar
+            run={run}
+            filters={state.filters}
+            shown={shown}
+            onToggle={(category) => dispatch({ type: 'toggleCategory', category })}
+            onErrorsOnly={(value) => dispatch({ type: 'setErrorsOnly', value })}
+            onText={(text) => dispatch({ type: 'setText', text })}
+            onClear={() => dispatch({ type: 'clearFilters' })}
+          />
+          <Timeline
+            run={run}
+            groups={groups}
+            collapsed={state.collapsed}
+            selectedId={state.selectedId}
+            onSelect={(id) => dispatch({ type: 'select', id })}
+            onOpen={(id) => dispatch({ type: 'openDetail', id })}
+            onCollapse={(key, collapsed) => dispatch({ type: 'setCollapsed', key, collapsed })}
+          />
+        </>
+      ) : (
+        <p className="muted">No readable events in this file.</p>
+      )}
+      {helpOpen && <ShortcutHelp onClose={() => setHelpOpen(false)} />}
     </main>
   )
 }
