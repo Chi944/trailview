@@ -8,6 +8,7 @@ import { FilterBar, SEARCH_INPUT_ID } from './run/FilterBar.tsx'
 import { Timeline } from './timeline/Timeline.tsx'
 import { groupItems } from './timeline/groups.ts'
 import { ShortcutHelp } from './a11y/ShortcutHelp.tsx'
+import { DetailPanel } from './detail/DetailPanel.tsx'
 import { useGlobalKeys } from './a11y/useGlobalKeys.ts'
 import { initialState, reducer } from './state.ts'
 
@@ -22,6 +23,7 @@ export function App() {
   const run = state.file?.runs[state.runIndex]
   const groups = useMemo(() => (run ? groupItems(run.items, state.filters) : []), [run, state.filters])
   const shown = groups.reduce((n, g) => n + g.items.length, 0)
+  const detailItem = state.detailOpen ? run?.items.find((i) => i.id === state.selectedId) : undefined
 
   const keys = useMemo(
     () => ({
@@ -79,6 +81,7 @@ export function App() {
             onText={(text) => dispatch({ type: 'setText', text })}
             onClear={() => dispatch({ type: 'clearFilters' })}
           />
+          <div className={`workspace${detailItem ? ' workspace--split' : ''}`}>
           <Timeline
             run={run}
             groups={groups}
@@ -88,6 +91,8 @@ export function App() {
             onOpen={(id) => dispatch({ type: 'openDetail', id })}
             onCollapse={(key, collapsed) => dispatch({ type: 'setCollapsed', key, collapsed })}
           />
+          {detailItem && <DetailPanel run={run} item={detailItem} onClose={() => dispatch({ type: 'closeDetail' })} />}
+          </div>
         </>
       ) : (
         <p className="muted">No readable events in this file.</p>

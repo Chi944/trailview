@@ -515,3 +515,177 @@ kbd {
   border-radius: 4px;
   background: var(--surface-2);
 }
+
+.mono {
+  font-family: var(--mono);
+  font-size: 0.85em;
+}
+
+/* Workspace: timeline with optional detail panel */
+.workspace {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+}
+
+.workspace--split {
+  grid-template-columns: minmax(0, 3fr) minmax(20rem, 2fr);
+}
+
+@media (max-width: 960px) {
+  .workspace--split {
+    grid-template-columns: 1fr;
+  }
+}
+
+.workspace--split .row {
+  grid-template-columns: 5.5rem 0.25rem minmax(0, 1fr) auto 5rem;
+}
+
+.workspace--split .row__bar {
+  display: none;
+}
+
+/* Detail panel */
+.detail {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  max-height: 70vh;
+  overflow: auto;
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.detail__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.detail__type {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+
+.detail__section h3 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 0 0 0.4rem;
+}
+
+.fields {
+  margin: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.fields > div {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  gap: 0.5rem;
+}
+
+.fields dt {
+  color: var(--muted);
+}
+
+.fields dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.error-box {
+  border: 1px solid var(--danger);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  color: var(--text);
+}
+
+.error-box strong {
+  color: var(--danger);
+}
+
+.text-block {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+}
+
+.messages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.messages__role {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.tool-request + .tool-request {
+  margin-top: 0.5rem;
+}
+
+.attempts {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.attempts__failed {
+  color: var(--danger);
+}
+
+.attempts__ok {
+  color: var(--ok);
+}
+
+/* JSON tree */
+.json {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.json__children {
+  padding-left: 1rem;
+  border-left: 1px solid var(--border);
+  margin-left: 0.25rem;
+}
+
+.json summary {
+  cursor: pointer;
+}
+
+.json__key {
+  color: var(--accent);
+}
+
+.json__string {
+  color: var(--ok);
+}
+
+.json__number,
+.json__bool {
+  color: var(--warn);
+}
+
+.json__null,
+.json__count,
+.json__punct {
+  color: var(--muted);
+}

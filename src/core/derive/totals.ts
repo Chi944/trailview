@@ -1,5 +1,6 @@
 import type { ParsedEvent } from '../parse/jsonl.ts'
 import { estimateCost, findPrice, type PriceTable } from '../pricing/prices.ts'
+import type { ModelCallEvent } from '../schema/events.ts'
 import type { Approval } from './approvals.ts'
 
 export interface Totals {
@@ -63,16 +64,12 @@ export function computeTotals(
           totals.cacheReadTokens += usage.cache_read_tokens ?? 0
           totals.cacheWriteTokens += usage.cache_write_tokens ?? 0
         }
-        if (event.cost_usd !== undefined) {
-          totals.costUsd += event.cost_usd
+        const cost = callCost(event, pricing)
+        if (cost) {
+          totals.costUsd += cost.usd
+          totals.costEstimated ||= cost.estimated
         } else if (usage) {
-          const price = findPrice(event.model, pricing)
-          if (price) {
-            totals.costUsd += estimateCost(price, usage.input_tokens, usage.output_tokens)
-            totals.costEstimated = true
-          } else {
-            totals.unpricedCalls++
-          }
+          totals.unpricedCalls++
         }
         break
       }
@@ -87,4 +84,14 @@ export function computeTotals(
     }
   }
   return totals
+}
+
+// Cost of one model call: the logged cost_usd, else an estimate from usage and
+// the price table, else undefined.
+export function callCost(event: ModelCallEvent, pricing: PriceTable = {}): { usd: number; estimated: boolean } | undefined {
+  if (event.cost_usd !== undefined) return { usd: event.cost_usd, estimated: false }
+  if (!event.usage) return undefined
+  const price = findPrice(event.model, pricing)
+  if (!price) return undefined
+  return { usd: estimateCost(price, event.usage.input_tokens, event.usage.output_tokens), estimated: true }
 }

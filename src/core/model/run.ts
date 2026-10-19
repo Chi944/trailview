@@ -3,6 +3,7 @@ import type { ErrorInfo, RunStartEvent } from '../schema/events.ts'
 import { pairApprovals, type Approval } from '../derive/approvals.ts'
 import { foldRetries, type TimelineItem } from '../derive/retries.ts'
 import { computeTotals, type Totals } from '../derive/totals.ts'
+import type { PriceTable } from '../pricing/prices.ts'
 
 export type RunStatus = 'succeeded' | 'failed' | 'cancelled' | 'incomplete'
 
@@ -21,6 +22,8 @@ export interface Run {
   items: TimelineItem[]
   approvals: Approval[]
   totals: Totals
+  // Price overrides from run.start, used for per-call cost estimates.
+  pricing: PriceTable
 }
 
 // Groups parsed events into runs, in the order each run first appears.
@@ -74,5 +77,6 @@ function buildRun(id: string, unsorted: ParsedEvent[]): Run {
     items: foldRetries(events),
     approvals,
     totals: computeTotals(events, approvals, wallMs, start?.pricing),
+    pricing: start?.pricing ?? {},
   }
 }
