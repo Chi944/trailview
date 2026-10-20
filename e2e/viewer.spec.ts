@@ -33,3 +33,15 @@ test('load a sample, filter to errors, open a step with the keyboard and read th
   await expect(detail).toBeHidden()
   await expect(timeline).toBeFocused()
 })
+
+test('open an OpenTelemetry trace and see the approval it waited on', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /OpenTelemetry trace/ }).click()
+
+  await expect(page.getByText('OpenTelemetry (OTLP JSON)')).toBeVisible()
+  await expect(page.locator('.totals__item', { hasText: 'Model calls' }).locator('dd')).toHaveText('4')
+  await expect(page.locator('.totals__item', { hasText: 'Waiting on approvals' }).locator('dd')).toHaveText('28.9 s')
+
+  await page.getByRole('option', { name: /Approval requested/ }).click()
+  await expect(page.getByRole('complementary')).toContainText('refund_over_50')
+})

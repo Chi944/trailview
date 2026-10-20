@@ -62,6 +62,7 @@ export function App() {
     <main className="viewer">
       <RunHeader
         fileName={file.name}
+        format={file.format}
         runs={file.runs}
         runIndex={runIndex}
         onSelectRun={(index) => dispatch({ type: 'selectRun', index })}

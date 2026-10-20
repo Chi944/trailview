@@ -1,8 +1,10 @@
 import type { Run } from '../../core/model/run.ts'
 import { formatDuration } from '../format.ts'
+import { FORMAT_LABELS, type LogFormat } from '../../core/parse/detect.ts'
 
 interface Props {
   fileName: string
+  format: LogFormat
   runs: Run[]
   runIndex: number
   onSelectRun: (index: number) => void
@@ -10,7 +12,7 @@ interface Props {
   onHelp: () => void
 }
 
-export function RunHeader({ fileName, runs, runIndex, onSelectRun, onClose, onHelp }: Props) {
+export function RunHeader({ fileName, format, runs, runIndex, onSelectRun, onClose, onHelp }: Props) {
   const run = runs[runIndex]
   return (
     <header className="run-header">
@@ -19,7 +21,10 @@ export function RunHeader({ fileName, runs, runIndex, onSelectRun, onClose, onHe
         {run && <span className={`status status--${run.status}`}>{run.status}</span>}
       </div>
       <div className="run-header__meta">
-        <span className="muted">{fileName}</span>
+        <span className="muted">
+          {fileName}
+          {format !== 'jsonl' && ` · ${FORMAT_LABELS[format]}`}
+        </span>
         {run && run.events.length > 0 && (
           <span className="muted">
             {new Date(run.startMs).toLocaleString()} · {formatDuration(run.totals.wallMs)}

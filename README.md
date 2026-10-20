@@ -23,7 +23,7 @@ Then open http://localhost:5173 and load a file. Press `?` for keyboard shortcut
 
 ## Log format
 
-Trailview reads JSONL: one JSON event per line. See [docs/schema.md](docs/schema.md) for the format and [samples/](samples/) for example runs. OpenTelemetry GenAI traces are planned next.
+Trailview reads its own JSONL format, one JSON event per line, and OpenTelemetry traces exported as OTLP JSON that follow the GenAI semantic conventions. It detects which one a file is from its content. See [docs/schema.md](docs/schema.md) for the format and the OpenTelemetry mapping, and [samples/](samples/) for example runs.
 
 ## Development
 

@@ -111,12 +111,49 @@ The viewer computes wait time as `decision.ts − request.ts`. A rejected reques
 
 Any `input` or `output` may be replaced by `{ "truncated": true, "bytes": n, "preview": "…" }`. The viewer shows the preview and the original size.
 
-## OpenTelemetry mapping (phase 2)
+## OpenTelemetry import
 
-Planned adapter from GenAI semantic-convention spans to these events. The conventions are still marked as in development, so attribute names will be checked against the current spec when the adapter is built.
+Trailview also opens OpenTelemetry traces in OTLP/JSON: the format the Collector's file exporter writes, one export request per line, or a single exported document. The format is detected from the content, so the file name does not matter. Spans are read using the [GenAI semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai) as of October 2026. Those conventions are still marked as in development, so names may change.
 
 | OTel | Trailview |
 |---|---|
+| trace | one run; `run_id` is the trace id |
+| outermost span with `gen_ai.operation.name` = `invoke_agent` | `run.start` and `run.end` (agent from `gen_ai.agent.name` and `gen_ai.agent.version`, input and output from `gen_ai.input.messages` and `gen_ai.output.messages`) |
+| no `invoke_agent` span | the run spans the first to the last GenAI span; the agent is `service.name`, and the run failed if any span failed |
+| `chat`, `text_completion`, `generate_content` | `model.call` |
+| `execute_tool` | `tool.call` (`gen_ai.tool.name`, `gen_ai.tool.call.id`, `gen_ai.tool.call.arguments`, `gen_ai.tool.call.result`) |
+| nested `invoke_agent` | a `log` row naming the sub-agent |
+| any other GenAI operation (`embeddings`, `retrieval`, memory operations) | a generic row of type `otel.<operation>` with the span attributes |
+| span without `gen_ai.operation.name` | skipped, with one warning giving the count |
+| `gen_ai.provider.name`, `gen_ai.response.model` (else `gen_ai.request.model`) | `provider`, `model` |
+| `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens` | `usage.input_tokens`, `usage.output_tokens` |
+| `gen_ai.usage.cache_read.input_tokens`, `gen_ai.usage.cache_write.input_tokens` | `usage.cache_read_tokens`, `usage.cache_write_tokens` |
+| first of `gen_ai.response.finish_reasons` | `stop_reason` |
+| `text` and `tool_call` parts of `gen_ai.output.messages` | `output.text`, `output.tool_calls` |
+| span start time and duration | `ts`, `duration_ms` |
+| span status `ERROR`, `error.type`, status message or `exception.message` | `status: "error"`, `error.type`, `error.message` |
+
+OTel counts cached tokens inside `gen_ai.usage.input_tokens`. Trailview keeps them separate, so `usage.input_tokens` is the OTel input count minus the cache read and write counts.
+
+OTel has no steps, retries or approvals, so Trailview derives or reads them:
+
+- **Steps:** each model call starts a new step, and tool calls and other rows belong to the step of the model call before them.
+- **Retries:** a model call that follows a failed call to the same model, with no tool call between, is its retry. A tool call that reuses the `gen_ai.tool.call.id` of a failed tool call is its retry.
+- **Approvals:** span events named `trailview.approval.request` and `trailview.approval.decision` on an `execute_tool` span, with these attributes:
+
+| Attribute | On | Maps to |
+|---|---|---|
+| `trailview.approval.id` | both (required) | `approval_id` |
+| `trailview.approval.action` | request | `action` (defaults to the tool name) |
+| `trailview.approval.summary` | request | `summary` |
+| `trailview.approval.policy` | request | `policy` |
+| `trailview.approval.decision` | decision | `decision`: `approved` or `rejected` |
+| `trailview.approval.by.kind`, `trailview.approval.by.name` | decision | `by.kind` (defaults to `human`), `by.name` |
+| `trailview.approval.reason` | decision | `reason` |
+
+See [`samples/otel-support-refund.json`](../samples/otel-support-refund.json) for a complete trace.
+
+---|---|
 | span with `gen_ai.operation.name` = `chat` / `text_completion` | `model.call` |
 | span with `gen_ai.operation.name` = `execute_tool` | `tool.call` |
 | span with `gen_ai.operation.name` = `invoke_agent` | `run.start` + `run.end` |

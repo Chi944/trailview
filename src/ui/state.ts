@@ -1,9 +1,11 @@
-import { parseJsonl, type ParseIssue } from '../core/parse/jsonl.ts'
+import type { ParseIssue } from '../core/parse/jsonl.ts'
+import { parseLog, type LogFormat } from '../core/parse/detect.ts'
 import { buildRuns, type Run } from '../core/model/run.ts'
 import { NO_FILTERS, type Category, type Filters } from '../core/filter.ts'
 
 export interface LoadedFile {
   name: string
+  format: LogFormat
   runs: Run[]
   issues: ParseIssue[]
 }
@@ -39,8 +41,8 @@ export const initialState: AppState = { runIndex: 0, filters: NO_FILTERS, detail
 export function reducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'loaded': {
-      const { events, issues } = parseJsonl(action.text)
-      return { ...initialState, file: { name: action.name, runs: buildRuns(events), issues } }
+      const { format, events, issues } = parseLog(action.text)
+      return { ...initialState, file: { name: action.name, format, runs: buildRuns(events), issues } }
     }
     case 'loadFailed':
       return { ...state, loadError: action.message }

@@ -27,31 +27,46 @@ export interface ParseResult {
 // Parses a Trailview JSONL file. Never throws: each bad line becomes an issue
 // with its 1-based line number and the rest of the file is still read.
 export function parseJsonl(text: string): ParseResult {
-  const events: ParsedEvent[] = []
+  const records: EventRecord[] = []
   const issues: ParseIssue[] = []
-  const seenIds = new Map<string, Set<string>>()
 
   const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/)
   lines.forEach((raw, index) => {
     const line = index + 1
     if (raw.trim() === '') return
-
-    let value: unknown
     try {
-      value = JSON.parse(raw)
+      records.push({ line, value: JSON.parse(raw) })
     } catch (err) {
       issues.push({ line, severity: 'error', message: `Not valid JSON: ${(err as Error).message}` })
-      return
     }
+  })
+
+  return validateEvents(records, issues)
+}
+
+export interface EventRecord {
+  // Where the record came from, for issue messages.
+  line: number
+  value: unknown
+}
+
+// Validates already-decoded event objects against the schema. Shared by the
+// JSONL parser and the format adapters so every input gets the same checks.
+export function validateEvents(records: EventRecord[], initialIssues: ParseIssue[] = []): ParseResult {
+  const events: ParsedEvent[] = []
+  const issues = [...initialIssues]
+  const seenIds = new Map<string, Set<string>>()
+
+  for (const { line, value } of records) {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
       issues.push({ line, severity: 'error', message: 'Expected a JSON object' })
-      return
+      continue
     }
 
     const envelope = envelopeSchema.safeParse(value)
     if (!envelope.success) {
       issues.push({ line, severity: 'error', message: describe(envelope.error) })
-      return
+      continue
     }
 
     const { type, run_id, id } = envelope.data
@@ -65,13 +80,13 @@ export function parseJsonl(text: string): ParseResult {
     if (!isKnownEventType(type)) {
       issues.push({ line, severity: 'warning', message: `Unknown event type "${type}", shown as a generic row` })
       events.push({ kind: 'unknown', line, event: envelope.data })
-      return
+      continue
     }
 
     const known = knownEventSchema.safeParse(value)
     if (!known.success) {
       issues.push({ line, severity: 'error', message: `${type}: ${describe(known.error)}` })
-      return
+      continue
     }
     if (known.data.type === 'run.start' && known.data.v > SCHEMA_VERSION) {
       issues.push({
@@ -81,8 +96,10 @@ export function parseJsonl(text: string): ParseResult {
       })
     }
     events.push({ kind: 'known', line, event: known.data })
-  })
+  }
 
+  // Stable sort keeps issues from the same line in the order they were found.
+  issues.sort((a, b) => a.line - b.line)
   return { events, issues }
 }
 

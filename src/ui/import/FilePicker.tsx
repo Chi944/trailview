@@ -36,7 +36,7 @@ export function FilePicker({ onText, onError }: Props) {
       onDrop={onDrop}
     >
       <button type="button" className="button button--primary" onClick={() => input.current?.click()}>
-        Open a .jsonl file
+        Open a log file
       </button>
       <span className="muted">or drop one here</span>
       <input
