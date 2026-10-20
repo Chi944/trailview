@@ -14,6 +14,11 @@ export const SAMPLES: Sample[] = [
     load: () => text(import('../../../samples/oncall-digest.jsonl?raw')),
   },
   {
+    file: 'oncall-digest-two-versions.jsonl',
+    title: 'Two runs to compare: on-call digest v0.4.2 and v0.4.3, which skips the rejected email',
+    load: () => text(import('../../../samples/oncall-digest-two-versions.jsonl?raw')),
+  },
+  {
     file: 'patchbot-failed.jsonl',
     title: 'Coding agent: fails a test fix and hits its step limit (estimated cost)',
     load: () => text(import('../../../samples/patchbot-failed.jsonl?raw')),
@@ -22,6 +27,11 @@ export const SAMPLES: Sample[] = [
     file: 'research-brief.jsonl',
     title: 'Research agent: 40+ calls with caching, a timeout and a policy approval',
     load: () => text(import('../../../samples/research-brief.jsonl?raw')),
+  },
+  {
+    file: 'backfill-crashed.jsonl',
+    title: 'Data backfill agent: the worker dies mid-extract, leaving a call that never finished',
+    load: () => text(import('../../../samples/backfill-crashed.jsonl?raw')),
   },
   {
     file: 'otel-support-refund.json',

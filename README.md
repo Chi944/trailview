@@ -6,7 +6,7 @@ It runs entirely in your browser, locally or as a static site. There is no accou
 
 ![Loading a sample run, opening a step with the keyboard, then filtering to approvals](docs/media/demo.gif)
 
-**Live demo:** coming with the first deploy. In the demo you pick a sample run or drop your own log file; it is read in the tab and never uploaded.
+**Live demo:** [chi944.github.io/trailview](https://chi944.github.io/trailview/). In the demo you pick a sample run or drop your own log file; it is read in the tab and never uploaded.
 
 ## Quick start
 
@@ -30,6 +30,12 @@ Trailview reads three formats and detects which one a file is from its content:
 - LangSmith run exports from LangChain and LangGraph agents, as returned by the LangSmith SDK's `list_runs`.
 
 See [docs/schema.md](docs/schema.md) for the format and both mappings, and [samples/](samples/) for example runs.
+
+If your agent can crash or be killed, also write a `model.start` or `tool.start` line when each call begins. A call that never finishes then shows as **unfinished**, so you can see what the run was waiting on when it stopped. The sample "Data backfill agent" shows one.
+
+## Comparing runs
+
+Press **Compare** above a run to put it next to another run: one from the same file, another file, or a sample. Trailview lines up the steps by the models and tools they called, so a step one run added or skipped does not shift the rest, and it shows the first point where the runs differ along with the change in cost, tokens, duration, retries, errors and approval wait. The sample "Two runs to compare" shows v0.4.2 and v0.4.3 of the on-call digest agent.
 
 ## Development
 

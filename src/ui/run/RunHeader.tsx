@@ -10,9 +10,10 @@ interface Props {
   onSelectRun: (index: number) => void
   onClose: () => void
   onHelp: () => void
+  onCompare?: () => void
 }
 
-export function RunHeader({ fileName, format, runs, runIndex, onSelectRun, onClose, onHelp }: Props) {
+export function RunHeader({ fileName, format, runs, runIndex, onSelectRun, onClose, onHelp, onCompare }: Props) {
   const run = runs[runIndex]
   return (
     <header className="run-header">
@@ -41,6 +42,11 @@ export function RunHeader({ fileName, format, runs, runIndex, onSelectRun, onClo
               ))}
             </select>
           </label>
+        )}
+        {onCompare && run && (
+          <button type="button" className="button" onClick={onCompare}>
+            Compare
+          </button>
         )}
         <button type="button" className="button" onClick={onHelp} aria-label="Keyboard shortcuts">
           ?
