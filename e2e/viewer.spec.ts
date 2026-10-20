@@ -45,3 +45,17 @@ test('open an OpenTelemetry trace and see the approval it waited on', async ({ p
   await page.getByRole('option', { name: /Approval requested/ }).click()
   await expect(page.getByRole('complementary')).toContainText('refund_over_50')
 })
+
+test('open a LangSmith export and see the failed query the agent recovered from', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /LangSmith export/ }).click()
+
+  await expect(page.getByText('LangSmith runs')).toBeVisible()
+  await expect(page.locator('.totals__item', { hasText: 'Model calls' }).locator('dd')).toHaveText('7')
+
+  await page.keyboard.press('e')
+  const failed = page.getByRole('option', { name: /run_query/ })
+  await expect(failed).toHaveCount(1)
+  await failed.click()
+  await expect(page.getByRole('complementary')).toContainText('category_name does not exist')
+})

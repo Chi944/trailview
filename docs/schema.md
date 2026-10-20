@@ -153,16 +153,32 @@ OTel has no steps, retries or approvals, so Trailview derives or reads them:
 
 See [`samples/otel-support-refund.json`](../samples/otel-support-refund.json) for a complete trace.
 
----|---|
-| span with `gen_ai.operation.name` = `chat` / `text_completion` | `model.call` |
-| span with `gen_ai.operation.name` = `execute_tool` | `tool.call` |
-| span with `gen_ai.operation.name` = `invoke_agent` | `run.start` + `run.end` |
-| `gen_ai.request.model`, `gen_ai.provider.name` | `model`, `provider` |
-| `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens` | `usage.*` |
-| `gen_ai.response.finish_reasons` | `stop_reason` |
-| `gen_ai.tool.name`, `gen_ai.tool.call.id` | `tool`, `call_id` |
-| span start time, duration, status, `error.type` | `ts`, `duration_ms`, `status`, `error.type` |
-| span events or attributes under `trailview.approval.*` | `approval.*` (OTel has no approval concept) |
+## LangSmith import
+
+Trailview opens LangSmith run exports, the run objects the LangSmith SDK's `list_runs` returns for LangChain and LangGraph traces, saved as a JSON array, as `{ "runs": [...] }`, as one run with nested `child_runs`, or as one run per line. Times without a UTC offset are read as UTC, as LangSmith writes them.
+
+| LangSmith | Trailview |
+|---|---|
+| `trace_id` | one run; `run_id` is the trace id |
+| the root run (no `parent_run_id`) | `run.start` and `run.end` (agent from `name` and `extra.metadata.revision_id`, input from `inputs`, output from `outputs`, `status: "failed"` when the root has an `error`) |
+| `run_type: "llm"` | `model.call` |
+| `run_type: "tool"` | `tool.call` (tool from `name`, input from `inputs`, output from `outputs.output`, unwrapping a `ToolMessage`) |
+| `run_type: "chain"`, `"prompt"`, `"parser"` | not shown, because they wrap the calls above (LangGraph nodes, for example); one that failed without a failed run inside it becomes an `error` row |
+| any other run type (`retriever`, `embedding`) | a generic row of type `langsmith.<run_type>` with the name, inputs and outputs |
+| `extra.metadata.ls_provider`, else the model class (`ChatAnthropic`, `ChatOpenAI`, ...) | `provider` |
+| `extra.metadata.ls_model_name`, else `extra.invocation_params.model` | `model` |
+| the first generation's message: text content, `tool_calls`, `response_metadata.stop_reason` | `output.text`, `output.tool_calls`, `stop_reason` |
+| the message's `usage_metadata` (else `llm_output.token_usage`, else `prompt_tokens` and `completion_tokens`) | `usage`; `input_token_details.cache_read` and `cache_creation` become `cache_read_tokens` and `cache_write_tokens` |
+| `total_cost` | `cost_usd` |
+| `error` (`Type: message` or `Type('message')`, then a traceback) | `status: "error"`, `error.type`, `error.message` (the first line only) |
+
+LangChain counts cached tokens inside `input_tokens`, so `usage.input_tokens` is that count minus the cache read and write counts, as with OpenTelemetry.
+
+Steps, retries and call ids are derived the same way as for OpenTelemetry: each model call starts a step; a model call straight after a failed call to the same model is its retry; a tool run straight after a failed run of the same tool is its retry. A tool run with no `tool_call_id` is matched to the first unanswered tool call of the same name from the model call before it.
+
+Approvals are read from run `events` named `trailview.approval.request` and `trailview.approval.decision` on a tool run. Their `kwargs` use Trailview's own field names: `approval_id` (required), `action`, `summary` and `policy` on the request, and `decision`, `by: { kind, name }` and `reason` on the decision. An approval gate inside the tool can append them to its run's events.
+
+See [`samples/langsmith-sql-analyst.json`](../samples/langsmith-sql-analyst.json) for a complete export.
 
 ---
 
