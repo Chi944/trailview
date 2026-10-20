@@ -3,6 +3,7 @@ import type { Run } from '../../core/model/run.ts'
 import type { TimelineItem } from '../../core/derive/retries.ts'
 import type { ParsedEvent } from '../../core/parse/jsonl.ts'
 import { isErrorEvent } from '../../core/filter.ts'
+import { isUnfinished } from '../../core/derive/starts.ts'
 import { formatDuration } from '../format.ts'
 import { describeEvent } from '../timeline/describe.ts'
 import { JsonView } from './JsonView.tsx'
@@ -38,7 +39,7 @@ export function DetailPanel({ run, item, onClose }: Props) {
     <aside className="detail" aria-labelledby="detail-title">
       <header className="detail__header">
         <div>
-          <div className="muted detail__type">{event.type}</div>
+          <div className="muted detail__type">{isUnfinished(final) ? `${final.kind === 'known' && final.source?.type} · unfinished` : event.type}</div>
           <h2 id="detail-title" ref={heading}>
             {label}
           </h2>
@@ -65,7 +66,7 @@ export function DetailPanel({ run, item, onClose }: Props) {
         {item.events.map((e) => (
           <div key={e.event.id}>
             <div className="muted mono">line {e.line}</div>
-            <JsonView value={e.event} openDepth={1} />
+            <JsonView value={(e.kind === 'known' && e.source) || e.event} openDepth={1} />
           </div>
         ))}
       </Section>

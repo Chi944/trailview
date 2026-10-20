@@ -7,7 +7,7 @@ export function SampleMenu({ onPick }: { onPick: (name: string, text: string) =>
       <ul>
         {SAMPLES.map((s) => (
           <li key={s.file}>
-            <button type="button" className="button button--link" onClick={() => onPick(s.file, s.text)}>
+            <button type="button" className="button button--link" onClick={() => void s.load().then((text) => onPick(s.file, text))}>
               {s.title}
             </button>
           </li>

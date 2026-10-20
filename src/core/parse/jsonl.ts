@@ -9,7 +9,9 @@ import {
 } from '../schema/events.ts'
 
 export type ParsedEvent =
-  | { kind: 'known'; line: number; event: KnownEvent }
+  // `source` is the line as written, when the viewer derived `event` from it
+  // (an unfinished model.start shown as a failed model.call).
+  | { kind: 'known'; line: number; event: KnownEvent; source?: KnownEvent }
   | { kind: 'unknown'; line: number; event: Envelope }
 
 export interface ParseIssue {
