@@ -1,9 +1,11 @@
-import { parseJsonl, type ParseIssue } from '../core/parse/jsonl.ts'
+import type { ParseIssue } from '../core/parse/jsonl.ts'
+import { parseLog, type LogFormat } from '../core/parse/detect.ts'
 import { buildRuns, type Run } from '../core/model/run.ts'
 import { NO_FILTERS, type Category, type Filters } from '../core/filter.ts'
 
 export interface LoadedFile {
   name: string
+  format: LogFormat
   runs: Run[]
   issues: ParseIssue[]
 }
@@ -18,6 +20,17 @@ export interface AppState {
   detailOpen: boolean
   // Step group keys the user collapsed.
   collapsed: string[]
+  // Compare mode: true while picking or viewing a comparison; `compare` is the other run's file.
+  comparing: boolean
+  compare?: CompareSide
+}
+
+// The run compared against the current one, and the file it came from.
+export interface CompareSide {
+  name: string
+  format: LogFormat
+  runs: Run[]
+  runIndex: number
 }
 
 export type AppAction =
@@ -33,14 +46,20 @@ export type AppAction =
   | { type: 'openDetail'; id?: string }
   | { type: 'closeDetail' }
   | { type: 'setCollapsed'; key: string; collapsed: boolean }
+  | { type: 'startCompare' }
+  | { type: 'stopCompare' }
+  | { type: 'compareWithRun'; index: number }
+  | { type: 'compareLoaded'; name: string; text: string }
+  | { type: 'selectCompareRun'; index: number }
+  | { type: 'changeCompare' }
 
-export const initialState: AppState = { runIndex: 0, filters: NO_FILTERS, detailOpen: false, collapsed: [] }
+export const initialState: AppState = { runIndex: 0, filters: NO_FILTERS, detailOpen: false, collapsed: [], comparing: false }
 
 export function reducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'loaded': {
-      const { events, issues } = parseJsonl(action.text)
-      return { ...initialState, file: { name: action.name, runs: buildRuns(events), issues } }
+      const { format, events, issues } = parseLog(action.text)
+      return { ...initialState, file: { name: action.name, format, runs: buildRuns(events), issues } }
     }
     case 'loadFailed':
       return { ...state, loadError: action.message }
@@ -48,6 +67,25 @@ export function reducer(state: AppState, action: AppAction): AppState {
       return { ...state, runIndex: action.index, selectedId: undefined, detailOpen: false, collapsed: [] }
     case 'close':
       return initialState
+    case 'startCompare':
+      return { ...state, comparing: true, detailOpen: false }
+    case 'stopCompare':
+      return { ...state, comparing: false, compare: undefined }
+    case 'changeCompare':
+      return { ...state, compare: undefined }
+    case 'compareWithRun': {
+      if (!state.file) return state
+      const { name, format, runs } = state.file
+      return { ...state, compare: { name, format, runs, runIndex: action.index } }
+    }
+    case 'compareLoaded': {
+      const { format, events } = parseLog(action.text)
+      const runs = buildRuns(events)
+      if (runs.length === 0) return { ...state, loadError: `No runs found in ${action.name}` }
+      return { ...state, loadError: undefined, compare: { name: action.name, format, runs, runIndex: 0 } }
+    }
+    case 'selectCompareRun':
+      return state.compare ? { ...state, compare: { ...state.compare, runIndex: action.index } } : state
     case 'toggleCategory': {
       const hidden = state.filters.hidden.includes(action.category)
         ? state.filters.hidden.filter((c) => c !== action.category)

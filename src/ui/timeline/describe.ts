@@ -21,6 +21,12 @@ export function describeEvent(parsed: ParsedEvent): { label: string; summary: st
     }
     case 'tool.call':
       return { label: event.tool, summary: event.error?.message ?? preview(event.output) }
+    // Start lines are folded into their calls when a run is built; these
+    // cases only cover a start shown on its own.
+    case 'model.start':
+      return { label: event.model, summary: 'started' }
+    case 'tool.start':
+      return { label: event.tool, summary: 'started' }
     case 'approval.request':
       return { label: 'Approval requested', summary: event.summary }
     case 'approval.decision': {
