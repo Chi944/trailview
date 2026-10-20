@@ -93,5 +93,5 @@ export function callCost(event: ModelCallEvent, pricing: PriceTable = {}): { usd
   if (!event.usage) return undefined
   const price = findPrice(event.model, pricing)
   if (!price) return undefined
-  return { usd: estimateCost(price, event.usage.input_tokens, event.usage.output_tokens), estimated: true }
+  return { usd: estimateCost(price, event.usage), estimated: true }
 }

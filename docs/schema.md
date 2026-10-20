@@ -6,7 +6,7 @@ A Trailview log is a text file with one JSON object per line. Each line is one e
 
 - **Steps are a field.** Each event carries an optional `step` number instead of separate step start and end events.
 - **Calls are written when they finish.** One line per finished model or tool call, with `ts` as its start time and `duration_ms`. A crash loses only the call that was in flight.
-- **Cost comes from the log when present.** If a `model.call` has `cost_usd` the viewer uses it; otherwise it estimates from a bundled price table (or `run.start.pricing`) and labels the figure "est.".
+- **Cost comes from the log when present.** If a `model.call` has `cost_usd` the viewer uses it; otherwise it estimates from a bundled price table (or `run.start.pricing`) and labels the figure "est.". Estimates include cache reads and writes.
 
 ## Principles
 
@@ -39,7 +39,7 @@ Ordering: the viewer sorts by `ts`, then by file order for ties.
 | `v` | integer | yes | Schema version. `1` for this proposal. |
 | `agent` | `{ name, version? }` | yes | |
 | `input` | any JSON | no | The task the run was given. |
-| `pricing` | object | no | Per-model price overrides, `{ "<model>": { "input_per_mtok": n, "output_per_mtok": n } }`. |
+| `pricing` | object | no | Per-model price overrides, `{ "<model>": { "input_per_mtok": n, "output_per_mtok": n, "cache_read_per_mtok"?: n, "cache_write_per_mtok"?: n } }`. Without cache prices a cache read costs 0.1× input and a cache write 1.25× input. |
 
 **`run.end`**: one per run, last line. If missing, the run is shown as *incomplete*.
 
@@ -62,6 +62,7 @@ Ordering: the viewer sorts by `ts`, then by file order for ties.
 | `stop_reason` | string | no | e.g. `end_turn`, `tool_use`, `max_tokens`. |
 | `usage` | `{ input_tokens, output_tokens, cache_read_tokens?, cache_write_tokens? }` | no | Integers. |
 | `cost_usd` | number | no | If absent, the viewer estimates from its price table and marks the figure "est.". |
+| `start_id` | string | no | The `id` of the `model.start` line this call finishes. |
 | `attempt`, `retry_of`, `error` | | no | See *Retries* below. |
 
 **`tool.call`**: one finished tool execution.
@@ -74,7 +75,12 @@ Ordering: the viewer sorts by `ts`, then by file order for ties.
 | `status` | `"ok" \| "error"` | yes | |
 | `input`, `output` | any JSON | no | |
 | `approval_id` | string | no | Set when the call ran after an approval. |
+| `start_id` | string | no | The `id` of the `tool.start` line this call finishes. |
 | `attempt`, `retry_of`, `error` | | no | See *Retries* below. |
+
+**`model.start`** / **`tool.start`** (optional): written when a call begins, so a call that never returns still shows up if the agent crashes or is killed. Fields: the same identifying fields as the finished call (`provider` and `model`, or `tool` with optional `call_id` and `approval_id`), plus optional `input`, `attempt` and `retry_of`.
+
+A start line is folded into the finished call whose `start_id` names it, or, for tools, the `tool.call` with the same `call_id`. A start line with no finished call is shown as an **unfinished** call: status error, with an "unfinished" badge, lasting from its start until the last moment the log covers. It counts as a call and an error in the totals. Writers that only log finished calls can ignore these lines.
 
 **`approval.request`**: the agent paused for a person.
 
@@ -153,16 +159,34 @@ OTel has no steps, retries or approvals, so Trailview derives or reads them:
 
 See [`samples/otel-support-refund.json`](../samples/otel-support-refund.json) for a complete trace.
 
----|---|
-| span with `gen_ai.operation.name` = `chat` / `text_completion` | `model.call` |
-| span with `gen_ai.operation.name` = `execute_tool` | `tool.call` |
-| span with `gen_ai.operation.name` = `invoke_agent` | `run.start` + `run.end` |
-| `gen_ai.request.model`, `gen_ai.provider.name` | `model`, `provider` |
-| `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens` | `usage.*` |
-| `gen_ai.response.finish_reasons` | `stop_reason` |
-| `gen_ai.tool.name`, `gen_ai.tool.call.id` | `tool`, `call_id` |
-| span start time, duration, status, `error.type` | `ts`, `duration_ms`, `status`, `error.type` |
-| span events or attributes under `trailview.approval.*` | `approval.*` (OTel has no approval concept) |
+## LangSmith import
+
+Trailview opens LangSmith run exports, the run objects the LangSmith SDK's `list_runs` returns for LangChain and LangGraph traces, saved as a JSON array, as `{ "runs": [...] }`, as one run with nested `child_runs`, or as one run per line. Times without a UTC offset are read as UTC, as LangSmith writes them.
+
+| LangSmith | Trailview |
+|---|---|
+| `trace_id` | one run; `run_id` is the trace id |
+| the root run (no `parent_run_id`) | `run.start` and `run.end` (agent from `name` and `extra.metadata.revision_id`, input from `inputs`, output from `outputs`, `status: "failed"` when the root has an `error`) |
+| `run_type: "llm"` | `model.call` |
+| `run_type: "tool"` | `tool.call` (tool from `name`, input from `inputs`, output from `outputs.output`, unwrapping a `ToolMessage`) |
+| `run_type: "chain"`, `"prompt"`, `"parser"` | not shown, because they wrap the calls above (LangGraph nodes, for example); one that failed without a failed run inside it becomes an `error` row |
+| any other run type (`retriever`, `embedding`) | a generic row of type `langsmith.<run_type>` with the name, inputs and outputs |
+| `extra.metadata.ls_provider`, else the model class (`ChatAnthropic`, `ChatOpenAI`, ...) | `provider` |
+| `extra.metadata.ls_model_name`, else `extra.invocation_params.model` | `model` |
+| the first generation's message: text content, `tool_calls`, `response_metadata.stop_reason` | `output.text`, `output.tool_calls`, `stop_reason` |
+| the message's `usage_metadata` (else `llm_output.token_usage`, else `prompt_tokens` and `completion_tokens`) | `usage`; `input_token_details.cache_read` and `cache_creation` become `cache_read_tokens` and `cache_write_tokens` |
+| `total_cost` | `cost_usd` |
+| `error` (`Type: message` or `Type('message')`, then a traceback) | `status: "error"`, `error.type`, `error.message` (the first line only) |
+
+LangChain counts cached tokens inside `input_tokens`, so `usage.input_tokens` is that count minus the cache read and write counts, as with OpenTelemetry.
+
+A run exported while it was still going has no `end_time` and no `error`. Such an `llm` or `tool` run becomes a `model.start` or `tool.start` line and shows as unfinished; a root still running gets no `run.end`, so the run shows as incomplete.
+
+Steps, retries and call ids are derived the same way as for OpenTelemetry: each model call starts a step; a model call straight after a failed call to the same model is its retry; a tool run straight after a failed run of the same tool is its retry. A tool run with no `tool_call_id` is matched to the first unanswered tool call of the same name from the model call before it.
+
+Approvals are read from run `events` named `trailview.approval.request` and `trailview.approval.decision` on a tool run. Their `kwargs` use Trailview's own field names: `approval_id` (required), `action`, `summary` and `policy` on the request, and `decision`, `by: { kind, name }` and `reason` on the decision. An approval gate inside the tool can append them to its run's events.
+
+See [`samples/langsmith-sql-analyst.json`](../samples/langsmith-sql-analyst.json) for a complete export.
 
 ---
 
