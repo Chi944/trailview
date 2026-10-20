@@ -59,3 +59,19 @@ test('open a LangSmith export and see the failed query the agent recovered from'
   await failed.click()
   await expect(page.getByRole('complementary')).toContainText('category_name does not exist')
 })
+
+test('compare two versions of an agent and see where they diverge', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /Two runs to compare/ }).click()
+  await page.getByRole('button', { name: 'Compare' }).click()
+  await page.getByRole('button', { name: /run_oncall_9c21/ }).click()
+
+  await expect(page.getByText('The runs first differ at A step 3')).toBeVisible()
+  const cost = page.getByRole('table', { name: 'Totals' }).getByRole('row', { name: /^Cost/ })
+  await expect(cost).toContainText('$0.0755')
+  await expect(cost).toContainText('$0.0507')
+  await expect(page.getByRole('table', { name: 'Steps' }).getByRole('row')).toHaveCount(7)
+
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('listbox', { name: 'Run timeline' })).toBeVisible()
+})

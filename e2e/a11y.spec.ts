@@ -21,5 +21,14 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.keyboard.press('?')
     await expect(page.getByRole('dialog')).toBeVisible()
     expect(await scan(page)).toEqual([])
+    await page.keyboard.press('Escape')
+
+    await page.getByRole('button', { name: 'Close file' }).click()
+    await page.getByRole('button', { name: /Two runs to compare/ }).click()
+    await page.getByRole('button', { name: 'Compare' }).click()
+    expect(await scan(page)).toEqual([])
+    await page.getByRole('button', { name: /run_oncall_9c21/ }).click()
+    await expect(page.getByRole('table', { name: 'Steps' })).toBeVisible()
+    expect(await scan(page)).toEqual([])
   })
 }
