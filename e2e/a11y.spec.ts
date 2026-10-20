@@ -21,5 +21,27 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.keyboard.press('?')
     await expect(page.getByRole('dialog')).toBeVisible()
     expect(await scan(page)).toEqual([])
+    await page.keyboard.press('Escape')
+
+    await page.getByRole('button', { name: 'Close file' }).click()
+    await page.getByRole('button', { name: /Two runs to compare/ }).click()
+    await page.getByRole('button', { name: 'Compare' }).click()
+    expect(await scan(page)).toEqual([])
+    await page.getByRole('button', { name: /run_oncall_9c21/ }).click()
+    await expect(page.getByRole('table', { name: 'Steps' })).toBeVisible()
+    expect(await scan(page)).toEqual([])
+  })
+
+  test(`no axe violations on a long timeline that renders only the rows in view (${scheme})`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: scheme })
+    await page.goto('/')
+    const lines = [JSON.stringify({ type: 'run.start', v: 1, run_id: 'long', id: 's', ts: '2026-10-20T08:00:00.000Z', agent: { name: 'crawler' } })]
+    for (let i = 1; i <= 500; i++) {
+      lines.push(JSON.stringify({ type: 'log', run_id: 'long', id: `l${i}`, ts: '2026-10-20T08:00:01.000Z', step: i, message: `page ${i}` }))
+    }
+    await page.getByTestId('file-input').setInputFiles({ name: 'long.jsonl', mimeType: 'application/x-ndjson', buffer: Buffer.from(lines.join('\n')) })
+    await page.getByRole('listbox', { name: 'Run timeline' }).focus()
+    await page.keyboard.press('PageDown')
+    expect(await scan(page)).toEqual([])
   })
 }
