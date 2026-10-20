@@ -6,11 +6,11 @@ It runs entirely in your browser, locally or as a static site. There is no accou
 
 ![Loading a sample run, opening a step with the keyboard, then filtering to approvals](docs/media/demo.gif)
 
-**Live demo:** coming with the first deploy. In the demo you pick a sample run or drop your own `.jsonl` file; it is read in the tab and never uploaded.
+**Live demo:** coming with the first deploy. In the demo you pick a sample run or drop your own log file; it is read in the tab and never uploaded.
 
 ## Quick start
 
-Open the demo and drop a JSONL log on it, or run it locally:
+Open the demo and drop a log file on it, or run it locally:
 
 ```sh
 git clone https://github.com/Chi944/trailview
