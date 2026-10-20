@@ -62,6 +62,7 @@ Ordering: the viewer sorts by `ts`, then by file order for ties.
 | `stop_reason` | string | no | e.g. `end_turn`, `tool_use`, `max_tokens`. |
 | `usage` | `{ input_tokens, output_tokens, cache_read_tokens?, cache_write_tokens? }` | no | Integers. |
 | `cost_usd` | number | no | If absent, the viewer estimates from its price table and marks the figure "est.". |
+| `start_id` | string | no | The `id` of the `model.start` line this call finishes. |
 | `attempt`, `retry_of`, `error` | | no | See *Retries* below. |
 
 **`tool.call`**: one finished tool execution.
@@ -74,7 +75,12 @@ Ordering: the viewer sorts by `ts`, then by file order for ties.
 | `status` | `"ok" \| "error"` | yes | |
 | `input`, `output` | any JSON | no | |
 | `approval_id` | string | no | Set when the call ran after an approval. |
+| `start_id` | string | no | The `id` of the `tool.start` line this call finishes. |
 | `attempt`, `retry_of`, `error` | | no | See *Retries* below. |
+
+**`model.start`** / **`tool.start`** (optional): written when a call begins, so a call that never returns still shows up if the agent crashes or is killed. Fields: the same identifying fields as the finished call (`provider` and `model`, or `tool` with optional `call_id` and `approval_id`), plus optional `input`, `attempt` and `retry_of`.
+
+A start line is folded into the finished call whose `start_id` names it, or, for tools, the `tool.call` with the same `call_id`. A start line with no finished call is shown as an **unfinished** call: status error, with an "unfinished" badge, lasting from its start until the last moment the log covers. It counts as a call and an error in the totals. Writers that only log finished calls can ignore these lines.
 
 **`approval.request`**: the agent paused for a person.
 
@@ -173,6 +179,8 @@ Trailview opens LangSmith run exports, the run objects the LangSmith SDK's `list
 | `error` (`Type: message` or `Type('message')`, then a traceback) | `status: "error"`, `error.type`, `error.message` (the first line only) |
 
 LangChain counts cached tokens inside `input_tokens`, so `usage.input_tokens` is that count minus the cache read and write counts, as with OpenTelemetry.
+
+A run exported while it was still going has no `end_time` and no `error`. Such an `llm` or `tool` run becomes a `model.start` or `tool.start` line and shows as unfinished; a root still running gets no `run.end`, so the run shows as incomplete.
 
 Steps, retries and call ids are derived the same way as for OpenTelemetry: each model call starts a step; a model call straight after a failed call to the same model is its retry; a tool run straight after a failed run of the same tool is its retry. A tool run with no `tool_call_id` is matched to the first unanswered tool call of the same name from the model call before it.
 

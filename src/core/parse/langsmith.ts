@@ -37,6 +37,8 @@ interface Run {
   startMs: number
   endMs: number
   error?: string
+  // Still running when exported: no end_time and no error.
+  open: boolean
   raw: RawRun
 }
 
@@ -125,7 +127,8 @@ function toRun(raw: RawRun, line: number, parentId?: string): Run | undefined {
   const type = str(raw.run_type)
   const startMs = timeMs(raw.start_time)
   if (!id || !type || startMs === undefined) return undefined
-  const endMs = timeMs(raw.end_time) ?? startMs
+  const end = timeMs(raw.end_time)
+  const endMs = end ?? startMs
   const error = str(raw.error) ?? (raw.status === 'error' ? 'Run failed' : undefined)
   return {
     line,
@@ -137,6 +140,7 @@ function toRun(raw: RawRun, line: number, parentId?: string): Run | undefined {
     startMs,
     endMs: Math.max(endMs, startMs),
     ...(error && { error }),
+    open: end === undefined && !error,
     raw,
   }
 }
@@ -147,6 +151,9 @@ function traceToEvents(traceId: string, runs: Run[]): EventRecord[] {
   const root = runs.find((r) => !r.parentId || !ids.has(r.parentId))!
   const out: EventRecord[] = []
   const add = (line: number, value: Record<string, unknown>) => out.push({ line, value: { run_id: traceId, ...value } })
+  // A call still running at export is written as a start line, which the
+  // viewer shows as unfinished.
+  const addCall = (run: Run, value: Record<string, unknown>) => add(run.line, run.open ? asStart(value) : value)
   const metadata = root.raw.extra?.metadata ?? {}
 
   add(root.line, {
@@ -182,7 +189,7 @@ function traceToEvents(traceId: string, runs: Run[]): EventRecord[] {
       const generation = generationOf(run.raw.outputs)
       const output = outputOf(generation)
       const cost = costOf(run.raw.total_cost)
-      add(run.line, {
+      addCall(run, {
         type: 'model.call',
         ...common,
         step,
@@ -215,7 +222,7 @@ function traceToEvents(traceId: string, runs: Run[]): EventRecord[] {
       pendingCalls = pendingCalls.filter((c) => c.id !== callId)
       const approvals = approvalEvents(run, traceId, Math.max(step, 1))
       const decided = approvals.find((a) => a.type === 'approval.decision')
-      add(run.line, {
+      addCall(run, {
         type: 'tool.call',
         ...common,
         step: Math.max(step, 1),
@@ -252,6 +259,8 @@ function traceToEvents(traceId: string, runs: Run[]): EventRecord[] {
     })
   }
 
+  // A trace whose root is still running has no end yet: the run shows as incomplete.
+  if (root.open) return out
   const output = outputTextOf(root.raw.outputs)
   add(root.line, {
     type: 'run.end',
@@ -262,6 +271,13 @@ function traceToEvents(traceId: string, runs: Run[]): EventRecord[] {
     ...(root.error && { error: errorInfo(root.error) }),
   })
   return out
+}
+
+const START_FIELDS = ['type', 'run_id', 'id', 'ts', 'step', 'provider', 'model', 'tool', 'call_id', 'input', 'approval_id', 'attempt', 'retry_of']
+
+function asStart(call: Record<string, unknown>): Record<string, unknown> {
+  const start = Object.fromEntries(Object.entries(call).filter(([key]) => START_FIELDS.includes(key)))
+  return { ...start, type: call.type === 'model.call' ? 'model.start' : 'tool.start' }
 }
 
 // Approvals have no LangSmith convention; Trailview reads run events named
