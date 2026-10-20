@@ -170,6 +170,18 @@ describe('parseLangSmith mapping', () => {
     expect(byId([rootRun(), model, untagged]).get('t1')).toMatchObject({ call_id: 'tc1', output: 'plain' })
   })
 
+  it('writes calls still running at export as start lines, and leaves the run without an end', () => {
+    const open = { end_time: null, outputs: null }
+    const model = { ...chat('m1', 1, 2, { toolCalls: [{ id: 'tc1', name: 'search', args: { q: 'x' } }] }) }
+    const tool = { ...run({ id: 't1', type: 'tool', start: 3, end: 3, parent: 'root', name: 'search', inputs: { q: 'x' } }), ...open }
+    const ev = byId([{ ...rootRun(), ...open }, model, tool])
+    expect(ev.get('t1')).toEqual({ type: 'tool.start', run_id: 'tr1', id: 't1', ts: '2026-10-19T10:00:03.000Z', step: 1, tool: 'search', call_id: 'tc1', input: { q: 'x' } })
+    expect(ev.has('root-end')).toBe(false)
+    const [built] = buildRuns(parse([{ ...rootRun(), ...open }, model, tool]).events)
+    expect(built!.status).toBe('incomplete')
+    expect(built!.events.find((e) => e.event.id === 't1')!.event).toMatchObject({ type: 'tool.call', unfinished: true })
+  })
+
   it('treats a failed model call followed by the same model as a retry, and parses the error', () => {
     const ev = byId([rootRun(), chat('m1', 1, 2, { error: "anthropic.InternalServerError: Error code: 529 - {'type': 'overloaded_error'}" }), chat('m2', 3, 4)])
     expect(ev.get('m1')).toMatchObject({ status: 'error', step: 1, error: { type: 'anthropic.InternalServerError', message: "Error code: 529 - {'type': 'overloaded_error'}" } })
