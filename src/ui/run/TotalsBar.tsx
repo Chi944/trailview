@@ -6,6 +6,9 @@ export function TotalsBar({ totals }: { totals: Totals }) {
   const stats: [string, string, string?][] = [
     ['Tokens in', formatTokens(totals.inputTokens)],
     ['Tokens out', formatTokens(totals.outputTokens)],
+    ...(totals.cacheReadTokens || totals.cacheWriteTokens
+      ? ([['Cache read / write', `${formatTokens(totals.cacheReadTokens)} / ${formatTokens(totals.cacheWriteTokens)}`]] as [string, string][])
+      : []),
     [
       'Cost',
       cost,
@@ -16,7 +19,7 @@ export function TotalsBar({ totals }: { totals: Totals }) {
     ['Retries', String(totals.retries)],
     ['Errors', String(totals.errors)],
     ['Approvals', totals.approvals ? `${totals.approvals} (${totals.rejections} rejected)` : '0'],
-    ['Waiting on people', formatDuration(totals.waitMs)],
+    ['Waiting on approvals', formatDuration(totals.waitMs)],
   ]
   return (
     <dl className="totals" aria-label="Run totals">

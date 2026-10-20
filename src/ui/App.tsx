@@ -8,6 +8,9 @@ import { FilterBar, SEARCH_INPUT_ID } from './run/FilterBar.tsx'
 import { Timeline } from './timeline/Timeline.tsx'
 import { groupItems } from './timeline/groups.ts'
 import { ShortcutHelp } from './a11y/ShortcutHelp.tsx'
+import { DetailPanel } from './detail/DetailPanel.tsx'
+import { ComparePicker } from './compare/ComparePicker.tsx'
+import { CompareView } from './compare/CompareView.tsx'
 import { useGlobalKeys } from './a11y/useGlobalKeys.ts'
 import { initialState, reducer } from './state.ts'
 
@@ -22,6 +25,7 @@ export function App() {
   const run = state.file?.runs[state.runIndex]
   const groups = useMemo(() => (run ? groupItems(run.items, state.filters) : []), [run, state.filters])
   const shown = groups.reduce((n, g) => n + g.items.length, 0)
+  const detailItem = state.detailOpen ? run?.items.find((i) => i.id === state.selectedId) : undefined
 
   const keys = useMemo(
     () => ({
@@ -31,11 +35,12 @@ export function App() {
       e: () => dispatch({ type: 'setErrorsOnly', value: !state.filters.errorsOnly }),
       Escape: () => {
         if (helpOpen) setHelpOpen(false)
+        else if (state.comparing) dispatch({ type: 'stopCompare' })
         else if (state.detailOpen) dispatch({ type: 'closeDetail' })
         else if (document.activeElement?.id === SEARCH_INPUT_ID) document.querySelector<HTMLElement>(TIMELINE_SELECTOR)?.focus()
       },
     }),
-    [helpOpen, state.detailOpen, state.filters.errorsOnly],
+    [helpOpen, state.comparing, state.detailOpen, state.filters.errorsOnly],
   )
   useGlobalKeys(keys, state.file !== undefined)
 
@@ -55,19 +60,44 @@ export function App() {
     )
   }
 
-  const { file, runIndex } = state
+  const { file, runIndex, compare } = state
+  const compareRun = compare?.runs[compare.runIndex]
   return (
     <main className="viewer">
       <RunHeader
         fileName={file.name}
+        format={file.format}
         runs={file.runs}
         runIndex={runIndex}
         onSelectRun={(index) => dispatch({ type: 'selectRun', index })}
         onClose={() => dispatch({ type: 'close' })}
         onHelp={() => setHelpOpen(true)}
+        onCompare={state.comparing ? undefined : () => dispatch({ type: 'startCompare' })}
       />
       <IssuesPanel issues={file.issues} />
-      {run ? (
+      {run && state.comparing ? (
+        compare && compareRun ? (
+          <CompareView
+            a={{ run, fileName: file.name }}
+            b={{ run: compareRun, fileName: compare.name }}
+            bRuns={compare.runs}
+            bIndex={compare.runIndex}
+            onSelectB={(index) => dispatch({ type: 'selectCompareRun', index })}
+            onChange={() => dispatch({ type: 'changeCompare' })}
+            onDone={() => dispatch({ type: 'stopCompare' })}
+          />
+        ) : (
+          <ComparePicker
+            runs={file.runs}
+            runIndex={runIndex}
+            error={state.loadError}
+            onPickRun={(index) => dispatch({ type: 'compareWithRun', index })}
+            onText={(name, text) => dispatch({ type: 'compareLoaded', name, text })}
+            onError={onError}
+            onCancel={() => dispatch({ type: 'stopCompare' })}
+          />
+        )
+      ) : run ? (
         <>
           <TotalsBar totals={run.totals} />
           <FilterBar
@@ -79,6 +109,7 @@ export function App() {
             onText={(text) => dispatch({ type: 'setText', text })}
             onClear={() => dispatch({ type: 'clearFilters' })}
           />
+          <div className={`workspace${detailItem ? ' workspace--split' : ''}`}>
           <Timeline
             run={run}
             groups={groups}
@@ -88,6 +119,8 @@ export function App() {
             onOpen={(id) => dispatch({ type: 'openDetail', id })}
             onCollapse={(key, collapsed) => dispatch({ type: 'setCollapsed', key, collapsed })}
           />
+          {detailItem && <DetailPanel run={run} item={detailItem} onClose={() => dispatch({ type: 'closeDetail' })} />}
+          </div>
         </>
       ) : (
         <p className="muted">No readable events in this file.</p>

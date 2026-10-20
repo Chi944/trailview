@@ -14,7 +14,7 @@ describe('reducer', () => {
   it('resets selection, filters and load errors on a new file', () => {
     let state = reducer(initialState, { type: 'loadFailed', message: 'nope' })
     state = reducer({ ...state, runIndex: 3, selectedId: 'x', filters: { hidden: ['log'], errorsOnly: true, text: 'q' } }, { type: 'loaded', name: 'x', text: '' })
-    expect(state).toEqual({ ...initialState, file: { name: 'x', runs: [], issues: [] } })
+    expect(state).toEqual({ ...initialState, file: { name: 'x', format: 'jsonl', runs: [], issues: [] } })
   })
 
   it('closes back to the empty state', () => {
