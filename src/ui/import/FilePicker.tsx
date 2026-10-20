@@ -3,10 +3,11 @@ import { useRef, useState, type DragEvent } from 'react'
 interface Props {
   onText: (name: string, text: string) => void
   onError: (message: string) => void
+  label?: string
 }
 
 // Reads a local file in the browser. Nothing is uploaded anywhere.
-export function FilePicker({ onText, onError }: Props) {
+export function FilePicker({ onText, onError, label = 'Open a log file' }: Props) {
   const input = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
 
@@ -36,7 +37,7 @@ export function FilePicker({ onText, onError }: Props) {
       onDrop={onDrop}
     >
       <button type="button" className="button button--primary" onClick={() => input.current?.click()}>
-        Open a .jsonl file
+        {label}
       </button>
       <span className="muted">or drop one here</span>
       <input

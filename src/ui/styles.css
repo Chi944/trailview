@@ -7,6 +7,7 @@
   --text: #1b1b19;
   --muted: #64645e;
   --accent: #2f5bd3;
+  --on-accent: #fff;
   --ok: #1f7a3f;
   --warn: #9a5b00;
   --danger: #b42318;
@@ -26,6 +27,7 @@
     --text: #ececea;
     --muted: #a3a39c;
     --accent: #8aa8ff;
+    --on-accent: #0b1020;
     --ok: #6fcf8f;
     --warn: #f0b252;
     --danger: #ff8a7a;
@@ -87,7 +89,7 @@ h2 {
 .button--primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .button--primary:hover {
@@ -99,6 +101,7 @@ h2 {
   border: none;
   background: none;
   padding: 0;
+  text-align: left;
   color: var(--accent);
   text-decoration: underline;
 }
@@ -328,6 +331,20 @@ h2 {
   outline-offset: -2px;
 }
 
+/* Long timelines render only the rows in view, so every header and row has a fixed height. */
+.timeline__space {
+  position: relative;
+}
+
+.timeline__space > .row {
+  height: 2.25rem;
+}
+
+.timeline__space > .step__header {
+  height: 1.9rem;
+  align-items: center;
+}
+
 .step + .step {
   border-top: 1px solid var(--border);
 }
@@ -432,7 +449,8 @@ h2 {
 }
 
 .badge--retry,
-.badge--pending {
+.badge--pending,
+.badge--warn {
   color: var(--warn);
 }
 .badge--error,
@@ -688,4 +706,146 @@ kbd {
 .json__count,
 .json__punct {
   color: var(--muted);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Compare */
+.compare-picker,
+.compare {
+  display: grid;
+  gap: 1rem;
+}
+
+.compare-picker {
+  max-width: 44rem;
+}
+
+.compare-picker h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.compare-picker ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.compare-picker__head,
+.compare__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.compare-picker__head h2,
+.compare__head h2 {
+  margin: 0;
+}
+
+.compare__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.compare__sides {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 0.75rem;
+}
+
+.compare__card {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.compare__label {
+  font-weight: 600;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--surface-2);
+  flex: none;
+}
+
+.compare__summary {
+  margin: 0;
+}
+
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-variant-numeric: tabular-nums;
+}
+
+.compare-table caption {
+  text-align: left;
+  font-weight: 600;
+  padding-bottom: 0.4rem;
+}
+
+.compare-table th,
+.compare-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.45rem 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.compare-table thead th {
+  border-top: none;
+  color: var(--muted);
+  font-weight: 500;
+  background: var(--surface-2);
+}
+
+.compare-table tbody th {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.compare-table--steps td {
+  width: 45%;
+}
+
+.compare-table__differs th[scope='row'] {
+  box-shadow: inset 3px 0 0 var(--warn);
+}
+
+.compare-table__flag {
+  margin-left: 0.4rem;
+}
+
+.step-cell {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.delta--worse {
+  color: var(--danger);
+}
+
+.delta--better {
+  color: var(--ok);
 }

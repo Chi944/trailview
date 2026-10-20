@@ -3,6 +3,7 @@ import type { ErrorInfo, RunStartEvent } from '../schema/events.ts'
 import { pairApprovals, type Approval } from '../derive/approvals.ts'
 import { foldRetries, type TimelineItem } from '../derive/retries.ts'
 import { computeTotals, type Totals } from '../derive/totals.ts'
+import { resolveStarts } from '../derive/starts.ts'
 import type { PriceTable } from '../pricing/prices.ts'
 
 export type RunStatus = 'succeeded' | 'failed' | 'cancelled' | 'incomplete'
@@ -38,7 +39,7 @@ export function buildRuns(parsed: ParsedEvent[]): Run[] {
 }
 
 function buildRun(id: string, unsorted: ParsedEvent[]): Run {
-  const events = [...unsorted].sort((a, b) => Date.parse(a.event.ts) - Date.parse(b.event.ts) || a.line - b.line)
+  const events = resolveStarts([...unsorted].sort((a, b) => Date.parse(a.event.ts) - Date.parse(b.event.ts) || a.line - b.line))
 
   let start: RunStartEvent | undefined
   let status: RunStatus = 'incomplete'
