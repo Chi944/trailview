@@ -4,5 +4,5 @@ Budget: US$10 of Claude API credits, used only to generate realistic sample trac
 
 | Date | What | Estimate (US$) | Actual (US$) | Running total (US$) |
 |---|---|---|---|---|
-| | No spend yet | | | 0.00 |
 | 2026-10-20 | Realistic sample traces written in a Claude Code cloud session (session credits, no API calls) | 0.00 | 0.00 | 0.00 |
+| 2026-10-20 | LangSmith sample (`samples/langsmith-sql-analyst.json`) written by hand with a script, no API calls | 0.00 | 0.00 | 0.00 |
