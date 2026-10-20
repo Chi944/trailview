@@ -331,6 +331,20 @@ h2 {
   outline-offset: -2px;
 }
 
+/* Long timelines render only the rows in view, so every header and row has a fixed height. */
+.timeline__space {
+  position: relative;
+}
+
+.timeline__space > .row {
+  height: 2.25rem;
+}
+
+.timeline__space > .step__header {
+  height: 1.9rem;
+  align-items: center;
+}
+
 .step + .step {
   border-top: 1px solid var(--border);
 }

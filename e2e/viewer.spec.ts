@@ -75,3 +75,36 @@ test('compare two versions of an agent and see where they diverge', async ({ pag
   await page.keyboard.press('Escape')
   await expect(page.getByRole('listbox', { name: 'Run timeline' })).toBeVisible()
 })
+
+// Enough steps that the timeline renders only the rows in view.
+function longLog(steps: number): Buffer {
+  const lines = [JSON.stringify({ type: 'run.start', v: 1, run_id: 'long', id: 's', ts: '2026-10-20T08:00:00.000Z', agent: { name: 'crawler' } })]
+  for (let i = 1; i <= steps; i++) {
+    const ts = new Date(Date.UTC(2026, 9, 20, 8) + i * 1000).toISOString()
+    lines.push(JSON.stringify({ type: 'model.call', run_id: 'long', id: `m${i}`, ts, step: i, provider: 'p', model: 'm', duration_ms: 400, status: 'ok' }))
+    lines.push(JSON.stringify({ type: 'tool.call', run_id: 'long', id: `t${i}`, ts, step: i, tool: `fetch_${i}`, duration_ms: 200, status: 'ok' }))
+  }
+  return Buffer.from(lines.join('\n'))
+}
+
+test('a long run stays fast to move through and keeps the selection in view', async ({ page }) => {
+  await page.goto('/')
+  await page.getByTestId('file-input').setInputFiles({ name: 'long.jsonl', mimeType: 'application/x-ndjson', buffer: longLog(3000) })
+
+  const timeline = page.getByRole('listbox', { name: 'Run timeline' })
+  await expect(page.getByText('6001 of 6001 shown')).toBeVisible()
+  expect(await page.getByRole('option').count()).toBeLessThan(100)
+
+  await timeline.focus()
+  await page.keyboard.press('End')
+  const last = page.getByRole('option', { name: /fetch_3000/ })
+  await expect(last).toHaveAttribute('aria-selected', 'true')
+  await expect(last).toBeInViewport()
+  await expect(last).toHaveAttribute('aria-posinset', '6001')
+
+  await page.keyboard.press('Home')
+  await expect(page.getByRole('option', { name: /Run started/ })).toBeInViewport()
+  await page.keyboard.press('PageDown')
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('complementary')).toBeVisible()
+})
