@@ -60,6 +60,20 @@ test('open a LangSmith export and see the failed query the agent recovered from'
   await expect(page.getByRole('complementary')).toContainText('category_name does not exist')
 })
 
+test('open a run that crashed mid-call and see the call that never finished', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /Data backfill agent/ }).click()
+  await expect(page.getByText('incomplete', { exact: true }).first()).toBeVisible()
+
+  const row = page.getByRole('option', { name: /run_extract Started but never finished/ })
+  await expect(row).toContainText('unfinished')
+  await row.click()
+  const detail = page.getByRole('complementary', { name: 'run_extract' })
+  await expect(detail).toContainText('tool.start · unfinished')
+  await expect(detail).toContainText('the log ends before this call returned')
+  await expect(detail).toContainText('etl-worker-3')
+})
+
 test('compare two versions of an agent and see where they diverge', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: /Two runs to compare/ }).click()

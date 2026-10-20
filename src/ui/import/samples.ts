@@ -29,6 +29,11 @@ export const SAMPLES: Sample[] = [
     load: () => text(import('../../../samples/research-brief.jsonl?raw')),
   },
   {
+    file: 'backfill-crashed.jsonl',
+    title: 'Data backfill agent: the worker dies mid-extract, leaving a call that never finished',
+    load: () => text(import('../../../samples/backfill-crashed.jsonl?raw')),
+  },
+  {
     file: 'otel-support-refund.json',
     title: 'OpenTelemetry trace: a support agent retries an overloaded call and gets a refund approved',
     load: () => text(import('../../../samples/otel-support-refund.json?raw')),
