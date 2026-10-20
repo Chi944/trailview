@@ -15,9 +15,9 @@ export function ModelCallDetail({ event, run }: { event: ModelCallEvent; run: Ru
         rows={[
           ['Provider', event.provider],
           ['Model', event.model],
-          ['Status', event.status],
+          ['Status', event.unfinished ? 'unfinished' : event.status],
           ['Stop reason', event.stop_reason],
-          ['Duration', formatDuration(event.duration_ms)],
+          ['Duration', event.unfinished ? `at least ${formatDuration(event.duration_ms)}` : formatDuration(event.duration_ms)],
           ['Tokens in', usage && formatTokens(usage.input_tokens)],
           ['Tokens out', usage && formatTokens(usage.output_tokens)],
           ['Cache read', usage?.cache_read_tokens !== undefined ? formatTokens(usage.cache_read_tokens) : undefined],
@@ -73,8 +73,8 @@ export function ToolCallDetail({ event, approval }: { event: ToolCallEvent; appr
         rows={[
           ['Tool', event.tool],
           ['Call id', event.call_id && <span className="mono">{event.call_id}</span>],
-          ['Status', event.status],
-          ['Duration', formatDuration(event.duration_ms)],
+          ['Status', event.unfinished ? 'unfinished' : event.status],
+          ['Duration', event.unfinished ? `at least ${formatDuration(event.duration_ms)}` : formatDuration(event.duration_ms)],
           ['Approval', approval && `${approval.outcome}${approval.decision?.by.name ? ` by ${approval.decision.by.name}` : ''}`],
         ]}
       />

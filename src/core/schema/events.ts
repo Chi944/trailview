@@ -84,6 +84,8 @@ export const modelCallSchema = envelopeSchema.extend({
   stop_reason: z.string().optional(),
   usage: usageSchema.optional(),
   cost_usd: z.number().nonnegative().optional(),
+  // The id of the model.start line this call finishes, if one was written.
+  start_id: nonEmpty.optional(),
   ...retryFields,
 })
 
@@ -96,7 +98,30 @@ export const toolCallSchema = envelopeSchema.extend({
   input: z.unknown().optional(),
   output: z.unknown().optional(),
   approval_id: nonEmpty.optional(),
+  start_id: nonEmpty.optional(),
   ...retryFields,
+})
+
+// Optional lines written when a call begins, so a call that never returns
+// (the process crashed or was killed) still shows up. Once the finished call
+// arrives it is the record and the start line is folded into it.
+export const modelStartSchema = envelopeSchema.extend({
+  type: z.literal('model.start'),
+  provider: nonEmpty,
+  model: nonEmpty,
+  input: z.unknown().optional(),
+  attempt: z.number().int().min(1).optional(),
+  retry_of: nonEmpty.optional(),
+})
+
+export const toolStartSchema = envelopeSchema.extend({
+  type: z.literal('tool.start'),
+  tool: nonEmpty,
+  call_id: nonEmpty.optional(),
+  input: z.unknown().optional(),
+  approval_id: nonEmpty.optional(),
+  attempt: z.number().int().min(1).optional(),
+  retry_of: nonEmpty.optional(),
 })
 
 export const approvalRequestSchema = envelopeSchema.extend({
@@ -132,6 +157,8 @@ export const knownEventSchema = z.discriminatedUnion('type', [
   runEndSchema,
   modelCallSchema,
   toolCallSchema,
+  modelStartSchema,
+  toolStartSchema,
   approvalRequestSchema,
   approvalDecisionSchema,
   errorEventSchema,
@@ -143,6 +170,8 @@ export const KNOWN_EVENT_TYPES = [
   'run.end',
   'model.call',
   'tool.call',
+  'model.start',
+  'tool.start',
   'approval.request',
   'approval.decision',
   'error',
@@ -156,6 +185,8 @@ export type RunStartEvent = z.infer<typeof runStartSchema>
 export type RunEndEvent = z.infer<typeof runEndSchema>
 export type ModelCallEvent = z.infer<typeof modelCallSchema>
 export type ToolCallEvent = z.infer<typeof toolCallSchema>
+export type ModelStartEvent = z.infer<typeof modelStartSchema>
+export type ToolStartEvent = z.infer<typeof toolStartSchema>
 export type ApprovalRequestEvent = z.infer<typeof approvalRequestSchema>
 export type ApprovalDecisionEvent = z.infer<typeof approvalDecisionSchema>
 export type ErrorEvent = z.infer<typeof errorEventSchema>
