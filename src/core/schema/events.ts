@@ -41,7 +41,12 @@ export const runStartSchema = envelopeSchema.extend({
   pricing: z
     .record(
       z.string(),
-      z.looseObject({ input_per_mtok: z.number().nonnegative(), output_per_mtok: z.number().nonnegative() }),
+      z.looseObject({
+        input_per_mtok: z.number().nonnegative(),
+        output_per_mtok: z.number().nonnegative(),
+        cache_read_per_mtok: z.number().nonnegative().optional(),
+        cache_write_per_mtok: z.number().nonnegative().optional(),
+      }),
     )
     .optional(),
 })

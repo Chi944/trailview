@@ -6,7 +6,7 @@ A Trailview log is a text file with one JSON object per line. Each line is one e
 
 - **Steps are a field.** Each event carries an optional `step` number instead of separate step start and end events.
 - **Calls are written when they finish.** One line per finished model or tool call, with `ts` as its start time and `duration_ms`. A crash loses only the call that was in flight.
-- **Cost comes from the log when present.** If a `model.call` has `cost_usd` the viewer uses it; otherwise it estimates from a bundled price table (or `run.start.pricing`) and labels the figure "est.".
+- **Cost comes from the log when present.** If a `model.call` has `cost_usd` the viewer uses it; otherwise it estimates from a bundled price table (or `run.start.pricing`) and labels the figure "est.". Estimates include cache reads and writes.
 
 ## Principles
 
@@ -39,7 +39,7 @@ Ordering: the viewer sorts by `ts`, then by file order for ties.
 | `v` | integer | yes | Schema version. `1` for this proposal. |
 | `agent` | `{ name, version? }` | yes | |
 | `input` | any JSON | no | The task the run was given. |
-| `pricing` | object | no | Per-model price overrides, `{ "<model>": { "input_per_mtok": n, "output_per_mtok": n } }`. |
+| `pricing` | object | no | Per-model price overrides, `{ "<model>": { "input_per_mtok": n, "output_per_mtok": n, "cache_read_per_mtok"?: n, "cache_write_per_mtok"?: n } }`. Without cache prices a cache read costs 0.1× input and a cache write 1.25× input. |
 
 **`run.end`**: one per run, last line. If missing, the run is shown as *incomplete*.
 

@@ -134,6 +134,20 @@ describe('cost', () => {
     expect(run.totals.costUsd).toBeCloseTo(1 + 0.2, 9)
   })
 
+  it('includes cache reads and writes in estimates', () => {
+    const cached = { input_tokens: 0, output_tokens: 0, cache_read_tokens: 1_000_000, cache_write_tokens: 1_000_000 }
+    const run = runsFrom([model({ id: 'm', model: 'claude-sonnet-4', usage: cached })])[0]!
+    expect(run.totals.costUsd).toBeCloseTo(0.3 + 3.75, 9)
+  })
+
+  it('takes cache prices from run.start pricing', () => {
+    const pricing = { 'claude-sonnet-4': { input_per_mtok: 1, output_per_mtok: 2, cache_read_per_mtok: 0.5, cache_write_per_mtok: 0 } }
+    const custom = ev({ type: 'run.start', id: 's', v: 1, agent: { name: 'a' }, pricing })
+    const cached = { input_tokens: 0, output_tokens: 0, cache_read_tokens: 1_000_000, cache_write_tokens: 1_000_000 }
+    const run = runsFrom([custom, model({ id: 'm', model: 'claude-sonnet-4', usage: cached })])[0]!
+    expect(run.totals.costUsd).toBeCloseTo(0.5, 9)
+  })
+
   it('counts calls it cannot price instead of guessing', () => {
     const run = runsFrom([model({ id: 'm', model: 'mystery-model', usage })])[0]!
     expect(run.totals).toMatchObject({ costUsd: 0, costEstimated: false, unpricedCalls: 1 })
