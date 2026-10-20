@@ -26,8 +26,10 @@ export function categoryOf(parsed: ParsedEvent): Category {
   if (parsed.kind === 'unknown') return 'other'
   switch (parsed.event.type) {
     case 'model.call':
+    case 'model.start':
       return 'model'
     case 'tool.call':
+    case 'tool.start':
       return 'tool'
     case 'approval.request':
     case 'approval.decision':

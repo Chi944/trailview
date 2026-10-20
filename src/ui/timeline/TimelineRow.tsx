@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react'
 import type { TimelineItem } from '../../core/derive/retries.ts'
 import { categoryOf, isErrorEvent, itemHasError } from '../../core/filter.ts'
 import type { Approval } from '../../core/derive/approvals.ts'
+import { isUnfinished } from '../../core/derive/starts.ts'
 import { formatDuration } from '../format.ts'
 import { describeEvent } from './describe.ts'
 import { itemSpan } from './groups.ts'
@@ -60,7 +61,14 @@ export function TimelineRow({ item, runStartMs, runWallMs, selected, approval, o
         {approval && first.event.type === 'approval.request' && (
           <span className={`badge badge--${approval.outcome}`}>{approval.outcome}</span>
         )}
-        {failed && (isErrorEvent(final) ? <span className="badge badge--error">error</span> : <span className="badge badge--recovered">recovered</span>)}
+        {failed &&
+          (isUnfinished(final) ? (
+            <span className="badge badge--error">unfinished</span>
+          ) : isErrorEvent(final) ? (
+            <span className="badge badge--error">error</span>
+          ) : (
+            <span className="badge badge--recovered">recovered</span>
+          ))}
       </span>
       <span className="row__duration">{span > 0 ? formatDuration(span) : ''}</span>
       <span className="row__bar" aria-hidden="true">

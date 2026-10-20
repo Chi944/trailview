@@ -31,6 +31,8 @@ Trailview reads three formats and detects which one a file is from its content:
 
 See [docs/schema.md](docs/schema.md) for the format and both mappings, and [samples/](samples/) for example runs.
 
+If your agent can crash or be killed, also write a `model.start` or `tool.start` line when each call begins. A call that never finishes then shows as **unfinished**, so you can see what the run was waiting on when it stopped. The sample "Data backfill agent" shows one.
+
 ## Comparing runs
 
 Press **Compare** above a run to put it next to another run: one from the same file, another file, or a sample. Trailview lines up the steps by the models and tools they called, so a step one run added or skipped does not shift the rest, and it shows the first point where the runs differ along with the change in cost, tokens, duration, retries, errors and approval wait. The sample "Two runs to compare" shows v0.4.2 and v0.4.3 of the on-call digest agent.
