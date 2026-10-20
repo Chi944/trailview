@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import sample from '../../../samples/oncall-digest.jsonl?raw'
+import sample from '../../test/schema-example.jsonl?raw'
 import { parseJsonl } from '../../core/parse/jsonl.ts'
 import { buildRuns } from '../../core/model/run.ts'
 import { NO_FILTERS } from '../../core/filter.ts'

@@ -131,7 +131,7 @@ Planned adapter from GenAI semantic-convention spans to these events. The conven
 
 ## Example run (13 events)
 
-This run is bundled as [`samples/oncall-digest.jsonl`](../samples/oncall-digest.jsonl). An on-call digest agent looks up yesterday's failed jobs (the first lookup times out and is retried), drafts an email to the whole engineering list, gets **rejected**, re-targets the on-call engineer, gets **approved**, sends, and finishes. Prices are illustrative.
+This is a condensed version of the run bundled as [`samples/oncall-digest.jsonl`](../samples/oncall-digest.jsonl), and is kept verbatim in [`src/test/schema-example.jsonl`](../src/test/schema-example.jsonl), where the unit tests check it against the table below; the bundled file adds a log lookup, an on-call schedule lookup, full prompts and outputs, and costs at current list prices. An on-call digest agent looks up yesterday's failed jobs (the first lookup times out and is retried), drafts an email to the whole engineering list, gets **rejected**, re-targets the on-call engineer, gets **approved**, sends, and finishes. Prices are illustrative.
 
 ```jsonl
 {"type":"run.start","v":1,"run_id":"run_7f3a","id":"e01","ts":"2026-10-18T09:14:02.120Z","agent":{"name":"oncall-digest","version":"0.4.2"},"input":"Summarise yesterday's failed jobs and email the on-call engineer.","attrs":{"env":"local"}}

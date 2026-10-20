@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import sample from '../../../samples/oncall-digest.jsonl?raw'
+import sample from '../../test/schema-example.jsonl?raw'
 import { parseJsonl } from './jsonl.ts'
 
 const base = { run_id: 'r1', ts: '2026-10-18T09:14:02.120Z' }
@@ -7,7 +7,7 @@ const line = (fields: Record<string, unknown>) => JSON.stringify({ ...base, ...f
 const runStart = line({ type: 'run.start', id: 'e1', v: 1, agent: { name: 'a' } })
 
 describe('parseJsonl', () => {
-  it('parses the bundled on-call sample without issues', () => {
+  it('parses the docs/schema.md example without issues', () => {
     const { events, issues } = parseJsonl(sample)
     expect(issues).toEqual([])
     expect(events).toHaveLength(13)
@@ -29,7 +29,7 @@ describe('parseJsonl', () => {
     ])
   })
 
-  it('keeps retry and approval links from the sample', () => {
+  it('keeps retry and approval links from the example', () => {
     const { events } = parseJsonl(sample)
     const byId = new Map(events.map((e) => [e.event.id, e.event]))
     expect(byId.get('e04')).toMatchObject({ type: 'tool.call', attempt: 2, retry_of: 'e03', status: 'ok' })

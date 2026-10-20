@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import sample from '../../../samples/oncall-digest.jsonl?raw'
+import sample from '../../test/schema-example.jsonl?raw'
 import { parseJsonl } from '../parse/jsonl.ts'
 import { buildRuns } from './run.ts'
 import { at, ev, runsFrom } from '../../test/helpers.ts'
@@ -10,7 +10,7 @@ const model = (fields: Record<string, unknown>) =>
 const tool = (fields: Record<string, unknown>) =>
   ev({ type: 'tool.call', tool: 't', duration_ms: 100, status: 'ok', ...fields })
 
-describe('buildRuns on the on-call sample', () => {
+describe('buildRuns on the docs/schema.md example', () => {
   const [run] = buildRuns(parseJsonl(sample).events)
 
   it('matches the derived values documented in docs/schema.md', () => {

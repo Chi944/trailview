@@ -6,7 +6,7 @@ test('load a sample, filter to errors, open a step with the keyboard and read th
 
   const totals = page.getByRole('definition').filter({ hasText: 'est.' })
   await expect(totals).toHaveText(/^\$\d+\.\d{4} est\.$/)
-  await expect(page.locator('.totals__item', { hasText: 'Errors' }).locator('dd')).toHaveText('5')
+  await expect(page.locator('.totals__item', { hasText: 'Errors' }).locator('dd')).toHaveText('4')
 
   const timeline = page.getByRole('listbox', { name: 'Run timeline' })
   const options = timeline.getByRole('option')
@@ -27,7 +27,7 @@ test('load a sample, filter to errors, open a step with the keyboard and read th
 
   const detail = page.getByRole('complementary', { name: 'Error: step_limit' })
   await expect(detail).toBeVisible()
-  await expect(detail).toContainText('max_steps=6')
+  await expect(detail).toContainText('max_steps=8')
 
   await page.keyboard.press('Escape')
   await expect(detail).toBeHidden()
