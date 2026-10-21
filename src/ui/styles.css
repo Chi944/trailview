@@ -886,3 +886,11 @@ kbd {
   gap: 0.5rem;
   align-items: center;
 }
+
+.export {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-left: auto;
+}

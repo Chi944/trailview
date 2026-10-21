@@ -168,3 +168,20 @@ test('a link to your own file waits for it, then jumps to the event', async ({ p
   await expect(page.getByRole('complementary')).toContainText('r2 b2')
   await expect(page).toHaveURL(/#file=mine\.jsonl&run=r2&event=b2$/)
 })
+
+test('copy or download the filtered view as Markdown to paste into an issue', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.goto('/')
+  await page.getByRole('button', { name: /Coding agent: fails a test fix/ }).click()
+  await page.keyboard.press('e')
+  await page.getByRole('button', { name: 'Copy as Markdown' }).click()
+  await expect(page.getByRole('search').getByRole('status')).toHaveText('Copied as Markdown')
+  const md = String(await page.evaluate('navigator.clipboard.readText()'))
+  const shown = await page.getByRole('listbox', { name: 'Run timeline' }).getByRole('option').count()
+  expect(md).toMatch(new RegExp(`^${shown} of \\d+ events \\(errors only\\):$`, 'm'))
+  expect(md.split('\n').filter((l) => /^\| \+/.test(l))).toHaveLength(shown)
+
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download .md' }).click()
+  expect((await download).suggestedFilename()).toMatch(/\.md$/)
+})

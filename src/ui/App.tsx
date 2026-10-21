@@ -15,6 +15,8 @@ import { ComparePicker } from './compare/ComparePicker.tsx'
 import { CompareView } from './compare/CompareView.tsx'
 import { useGlobalKeys } from './a11y/useGlobalKeys.ts'
 import { initialState, reducer, type AppState } from './state.ts'
+import { ExportButtons } from './export/ExportButtons.tsx'
+import { runMarkdown } from './export/markdown.ts'
 import { linkHash, parseLink, type LinkTarget } from './link.ts'
 
 const TIMELINE_SELECTOR = '.timeline'
@@ -144,7 +146,19 @@ export function App() {
             onErrorsOnly={(value) => dispatch({ type: 'setErrorsOnly', value })}
             onText={(text) => dispatch({ type: 'setText', text })}
             onClear={() => dispatch({ type: 'clearFilters' })}
-          />
+          >
+            <ExportButtons
+              fileName={`${run.id.replace(/[^\w.-]+/g, '_')}.md`}
+              markdown={() =>
+                runMarkdown({
+                  run,
+                  fileName: file.name,
+                  filters: state.filters,
+                  link: `${location.origin}${location.pathname}${linkHash({ [file.sample ? 'sample' : 'file']: file.name, run: run.id })}`,
+                })
+              }
+            />
+          </FilterBar>
           <div className={`workspace${detailItem ? ' workspace--split' : ''}`}>
           <Timeline
             run={run}
