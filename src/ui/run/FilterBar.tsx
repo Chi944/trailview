@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { Run } from '../../core/model/run.ts'
 import { CATEGORIES, CATEGORY_LABELS, categoryOf, type Category, type Filters } from '../../core/filter.ts'
 
@@ -9,11 +10,13 @@ interface Props {
   onErrorsOnly: (value: boolean) => void
   onText: (text: string) => void
   onClear: () => void
+  // Actions on the filtered view, shown at the end of the bar.
+  children?: ReactNode
 }
 
 export const SEARCH_INPUT_ID = 'timeline-search'
 
-export function FilterBar({ run, filters, shown, onToggle, onErrorsOnly, onText, onClear }: Props) {
+export function FilterBar({ run, filters, shown, onToggle, onErrorsOnly, onText, onClear, children }: Props) {
   const counts = new Map<Category, number>()
   for (const item of run.items) {
     const c = categoryOf(item.events[0]!)
@@ -57,6 +60,7 @@ export function FilterBar({ run, filters, shown, onToggle, onErrorsOnly, onText,
           Clear filters
         </button>
       )}
+      {children}
     </div>
   )
 }

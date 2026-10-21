@@ -45,6 +45,10 @@ Press **Compare** above a run to put it next to another run: one from the same f
 
 The address bar always points at what you are looking at: the file, the run and the open event. Press **Copy link** on an event to share it. The log never goes in the link, only its file name and the run and event ids, so a teammate opens the link, then opens their copy of the same file, and Trailview jumps to the event. Links to a bundled sample open on their own, for example [`#sample=dev-lead-subagents.jsonl&run=run_lead_8d41&event=e008`](https://chi944.github.io/trailview/#sample=dev-lead-subagents.jsonl&run=run_lead_8d41&event=e008).
 
+## Exporting to Markdown
+
+**Copy as Markdown** puts the run's totals and the events you are looking at into a Markdown table, ready to paste into an issue or a pull request; **Download .md** saves the same text. The filters apply, so turning on **Errors only** first exports just the failures. Each row has the event id, and the export ends with a link back to the run (for your own file, the reader opens the same file to follow it).
+
 ## Development
 
 | Command | What it does |
