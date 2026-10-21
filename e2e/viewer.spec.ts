@@ -210,6 +210,8 @@ test('search shows where each event matched and which other runs match', async (
 test('break the cost down by model and by sub-agent', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: /Coding lead with sub-agents/ }).click()
+  // The sample loads lazily, so wait for the panel before pressing its shortcut.
+  await expect(page.getByText('Cost breakdown')).toBeVisible()
   const byAgent = page.getByRole('table', { name: 'By agent' })
   await expect(byAgent).toBeHidden()
 
