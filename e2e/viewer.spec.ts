@@ -211,6 +211,8 @@ test('break the cost down by model and by sub-agent', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: /Coding lead with sub-agents/ }).click()
   const byAgent = page.getByRole('table', { name: 'By agent' })
+  // The sample loads lazily; wait for it so the shortcut is listening before pressing c.
+  await expect(page.getByText('Cost breakdown')).toBeVisible()
   await expect(byAgent).toBeHidden()
 
   await page.keyboard.press('c')
