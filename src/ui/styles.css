@@ -871,3 +871,18 @@ kbd {
 .delta--better {
   color: var(--ok);
 }
+
+.notice {
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.detail__actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}

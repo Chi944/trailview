@@ -1,7 +1,8 @@
-import { useMemo, useReducer, useState } from 'react'
+import { useEffect, useMemo, useReducer, useState } from 'react'
 import { FilePicker } from './import/FilePicker.tsx'
 import { IssuesPanel } from './import/IssuesPanel.tsx'
 import { SampleMenu } from './import/SampleMenu.tsx'
+import { SAMPLES } from './import/samples.ts'
 import { RunHeader } from './run/RunHeader.tsx'
 import { TotalsBar } from './run/TotalsBar.tsx'
 import { FilterBar, SEARCH_INPUT_ID } from './run/FilterBar.tsx'
@@ -13,17 +14,45 @@ import { DetailPanel } from './detail/DetailPanel.tsx'
 import { ComparePicker } from './compare/ComparePicker.tsx'
 import { CompareView } from './compare/CompareView.tsx'
 import { useGlobalKeys } from './a11y/useGlobalKeys.ts'
-import { initialState, reducer } from './state.ts'
+import { initialState, reducer, type AppState } from './state.ts'
+import { linkHash, parseLink, type LinkTarget } from './link.ts'
 
 const TIMELINE_SELECTOR = '.timeline'
 
 export function App() {
-  const [state, dispatch] = useReducer(reducer, initialState)
+  // A link's target is read before the first render, so the hash is not cleared before it is used.
+  const [state, dispatch] = useReducer(reducer, undefined, (): AppState => ({ ...initialState, target: parseLink(location.hash) }))
   const [helpOpen, setHelpOpen] = useState(false)
   const load = (name: string, text: string) => dispatch({ type: 'loaded', name, text })
+  const loadSample = (name: string, text: string) => dispatch({ type: 'loaded', name, text, sample: true })
   const onError = (message: string) => dispatch({ type: 'loadFailed', message })
 
   const run = state.file?.runs[state.runIndex]
+
+  // A link to a bundled sample opens it; a link to any other file waits for the reader to open that file.
+  useEffect(() => {
+    const open = (target: LinkTarget | undefined) => {
+      if (!target) return
+      dispatch({ type: 'linkOpened', target })
+      const sample = target.sample ? SAMPLES.find((s) => s.file === target.sample) : undefined
+      if (sample) void sample.load().then((text) => dispatch({ type: 'loaded', name: sample.file, text, sample: true }))
+    }
+    open(parseLink(location.hash))
+    const onHashChange = () => open(parseLink(location.hash))
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+
+  // The address bar always links to what is on screen: the file, the run and the open event.
+  const linkedEvent = state.detailOpen ? state.selectedId : undefined
+  useEffect(() => {
+    if (state.target) return
+    const file = state.file
+    const hash = file
+      ? linkHash({ [file.sample ? 'sample' : 'file']: file.name, run: run?.id, event: linkedEvent })
+      : ''
+    if (hash !== location.hash) history.replaceState(null, '', hash || location.pathname + location.search)
+  }, [state.target, state.file, run, linkedEvent])
   const groups = useMemo(() => (run ? groupItems(run.items, state.filters, state.collapsed) : []), [run, state.filters, state.collapsed])
   const shown = groups.reduce((n, g) => n + g.items.length, 0)
   const detailItem = state.detailOpen ? run?.items.find((i) => i.id === state.selectedId) : undefined
@@ -56,7 +85,8 @@ export function App() {
             {state.loadError}
           </p>
         )}
-        <SampleMenu onPick={load} />
+        {state.target && <PendingLink target={state.target} />}
+        <SampleMenu onPick={loadSample} />
       </main>
     )
   }
@@ -76,6 +106,11 @@ export function App() {
         onCompare={state.comparing ? undefined : () => dispatch({ type: 'startCompare' })}
       />
       <IssuesPanel issues={file.issues} />
+      {state.linkMiss && (
+        <p role="status" className="notice">
+          {state.linkMiss}
+        </p>
+      )}
       {run && state.comparing ? (
         compare && compareRun ? (
           <CompareView
@@ -135,5 +170,22 @@ export function App() {
       )}
       {helpOpen && <ShortcutHelp onClose={() => setHelpOpen(false)} />}
     </main>
+  )
+}
+
+function PendingLink({ target }: { target: LinkTarget }) {
+  const where = [target.event && `event ${target.event}`, target.run && `run ${target.run}`].filter(Boolean).join(' in ')
+  const name = target.file ?? target.sample
+  return (
+    <p role="status" className="notice">
+      This link points to {where || 'a run'}
+      {name && (
+        <>
+          {' '}
+          of <span className="mono">{name}</span>
+        </>
+      )}
+      . Open that file to jump there. The log itself is never part of a link.
+    </p>
   )
 }

@@ -142,3 +142,29 @@ test('a long run stays fast to move through and keeps the selection in view', as
   await page.keyboard.press('Enter')
   await expect(page.getByRole('complementary')).toBeVisible()
 })
+
+test('open a link straight to a nested call, follow the address bar as you move and copy the link', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.goto('/#sample=dev-lead-subagents.jsonl&run=run_lead_8d41&event=e008')
+  await expect(page.getByRole('complementary', { name: 'Sub-agent: code-search' })).toBeVisible()
+  await expect(page.getByRole('option', { name: /Sub-agent: code-search/ })).toHaveAttribute('aria-selected', 'true')
+
+  await page.getByRole('option', { name: /Sub-agent: explorer/ }).click()
+  await expect(page).toHaveURL(/#sample=dev-lead-subagents\.jsonl&run=run_lead_8d41&event=e003$/)
+  await page.getByRole('button', { name: 'Copy link' }).click()
+  await expect(page.getByRole('complementary').getByRole('status')).toHaveText('Copied')
+  expect(await page.evaluate('navigator.clipboard.readText()')).toBe(page.url())
+
+  await page.getByRole('button', { name: 'Close file' }).click()
+  await expect(page).toHaveURL(/\/$/)
+})
+
+test('a link to your own file waits for it, then jumps to the event', async ({ page }) => {
+  await page.goto('/#file=mine.jsonl&run=r2&event=b2')
+  await expect(page.getByRole('status')).toContainText('This link points to event b2 in run r2 of mine.jsonl')
+  const line = (run: string, id: string) => JSON.stringify({ type: 'log', run_id: run, id, ts: '2026-10-20T08:00:00.000Z', message: `${run} ${id}` })
+  const text = [line('r1', 'a1'), line('r2', 'b1'), line('r2', 'b2')].join('\n')
+  await page.getByTestId('file-input').setInputFiles({ name: 'mine.jsonl', mimeType: 'application/x-ndjson', buffer: Buffer.from(text) })
+  await expect(page.getByRole('complementary')).toContainText('r2 b2')
+  await expect(page).toHaveURL(/#file=mine\.jsonl&run=r2&event=b2$/)
+})

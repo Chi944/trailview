@@ -41,6 +41,10 @@ When an agent hands work to a sub-agent, log an `agent.call` and set `parent_id`
 
 Press **Compare** above a run to put it next to another run: one from the same file, another file, or a sample. Trailview lines up the steps by the models and tools they called, so a step one run added or skipped does not shift the rest, and it shows the first point where the runs differ along with the change in cost, tokens, duration, retries, errors and approval wait. The sample "Two runs to compare" shows v0.4.2 and v0.4.3 of the on-call digest agent.
 
+## Linking to a step
+
+The address bar always points at what you are looking at: the file, the run and the open event. Press **Copy link** on an event to share it. The log never goes in the link, only its file name and the run and event ids, so a teammate opens the link, then opens their copy of the same file, and Trailview jumps to the event. Links to a bundled sample open on their own, for example [`#sample=dev-lead-subagents.jsonl&run=run_lead_8d41&event=e008`](https://chi944.github.io/trailview/#sample=dev-lead-subagents.jsonl&run=run_lead_8d41&event=e008).
+
 ## Development
 
 | Command | What it does |

@@ -38,6 +38,13 @@ for (const scheme of ['light', 'dark'] as const) {
     expect(await scan(page)).toEqual([])
   })
 
+  test(`no axe violations while a link waits for its file (${scheme})`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: scheme })
+    await page.goto('/#file=mine.jsonl&run=r2&event=b2')
+    await expect(page.getByRole('status')).toBeVisible()
+    expect(await scan(page)).toEqual([])
+  })
+
   test(`no axe violations on a long timeline that renders only the rows in view (${scheme})`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme })
     await page.goto('/')
