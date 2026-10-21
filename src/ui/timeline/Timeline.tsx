@@ -2,8 +2,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import type { Run } from '../../core/model/run.ts'
 import { formatDuration, formatTokens } from '../format.ts'
 import type { TimelineItem } from '../../core/derive/retries.ts'
-import { groupKeyOf, moveSelection, type StepGroup } from './groups.ts'
-import { TimelineRow, rowDomId } from './TimelineRow.tsx'
+import { foldKey, groupKeyOf, moveSelection, type StepGroup } from './groups.ts'
+import { TimelineRow, rowDomId, type RowProps } from './TimelineRow.tsx'
 import { layoutEntries, scrollToReveal, visibleRange } from './window.ts'
 
 interface Props {
@@ -62,7 +62,9 @@ export function Timeline({ run, groups, collapsed, selectedId, onSelect, onOpen,
         return
       case 'ArrowLeft':
       case 'ArrowRight': {
-        const key = selectedId && groupKeyOf(groups, selectedId)
+        // On a row with a sub-agent under it, ←/→ fold that row; elsewhere they collapse the step.
+        const selected = selectedId ? findItem(groups, selectedId) : undefined
+        const key = selected?.descendants ? foldKey(selected.id) : selectedId && groupKeyOf(groups, selectedId)
         if (key) {
           e.preventDefault()
           onCollapse(key, e.key === 'ArrowLeft')
@@ -74,6 +76,27 @@ export function Timeline({ run, groups, collapsed, selectedId, onSelect, onOpen,
 
   if (visibleCount === 0) {
     return <p className="muted timeline-empty">No events match the current filters.</p>
+  }
+
+  const renderRow = (item: TimelineItem, extra: Pick<RowProps, 'stepLabel' | 'position' | 'setSize' | 'style'> = {}) => {
+    const folded = collapsed.includes(foldKey(item.id))
+    return (
+      <TimelineRow
+        key={item.id}
+        item={item}
+        runStartMs={run.startMs}
+        runWallMs={run.totals.wallMs}
+        selected={item.id === selectedId}
+        approval={approvalByRequestId.get(item.id)}
+        folded={folded}
+        onToggleFold={item.descendants ? () => onCollapse(foldKey(item.id), !folded) : undefined}
+        onClick={() => {
+          list.current?.focus()
+          onOpen(item.id)
+        }}
+        {...extra}
+      />
+    )
   }
 
   return (
@@ -96,24 +119,9 @@ export function Timeline({ run, groups, collapsed, selectedId, onSelect, onOpen,
           collapsed={collapsed}
           selectedId={selectedId}
           header={(group, style) => <GroupHeader key={group.key} group={group} collapsed={collapsed} onCollapse={onCollapse} style={style} />}
-          row={(item, group, position, style) => (
-            <TimelineRow
-              key={item.id}
-              item={item}
-              runStartMs={run.startMs}
-              runWallMs={run.totals.wallMs}
-              selected={item.id === selectedId}
-              approval={approvalByRequestId.get(item.id)}
-              stepLabel={group.step !== undefined ? `Step ${group.step}` : 'Run'}
-              position={position}
-              setSize={visibleCount}
-              style={style}
-              onClick={() => {
-                list.current?.focus()
-                onOpen(item.id)
-              }}
-            />
-          )}
+          row={(item, group, position, style) =>
+            renderRow(item, { stepLabel: group.step !== undefined ? `Step ${group.step}` : 'Run', position, setSize: visibleCount, style })
+          }
         />
       ) : (
         groups.map((group) => {
@@ -123,27 +131,21 @@ export function Timeline({ run, groups, collapsed, selectedId, onSelect, onOpen,
           return (
             <div key={group.key} role="group" aria-labelledby={headingId} aria-describedby={`${headingId}-meta`} className="step">
               <GroupHeader group={group} collapsed={collapsed} onCollapse={onCollapse} />
-              {!isCollapsed &&
-                group.items.map((item) => (
-                  <TimelineRow
-                    key={item.id}
-                    item={item}
-                    runStartMs={run.startMs}
-                    runWallMs={run.totals.wallMs}
-                    selected={item.id === selectedId}
-                    approval={approvalByRequestId.get(item.id)}
-                    onClick={() => {
-                      list.current?.focus()
-                      onOpen(item.id)
-                    }}
-                  />
-                ))}
+              {!isCollapsed && group.items.map((item) => renderRow(item))}
             </div>
           )
         })
       )}
     </div>
   )
+}
+
+function findItem(groups: StepGroup[], id: string): TimelineItem | undefined {
+  for (const group of groups) {
+    const item = group.items.find((i) => i.id === id)
+    if (item) return item
+  }
+  return undefined
 }
 
 interface HeaderProps {
@@ -167,7 +169,7 @@ function GroupHeader({ group, collapsed, onCollapse, style }: HeaderProps) {
       </div>
       <span id={`${headingId}-meta`} className="step__meta muted">
         {isCollapsed && 'Collapsed · '}
-        {group.items.length < group.total ? `${group.items.length} of ${group.total} events` : `${group.total} event${group.total === 1 ? '' : 's'}`}
+        {group.items.length + group.folded < group.total ? `${group.items.length} of ${group.total} events` : `${group.total} event${group.total === 1 ? '' : 's'}`}
         {group.endMs > group.startMs && ` · ${formatDuration(group.endMs - group.startMs)}`}
         {group.inputTokens + group.outputTokens > 0 && ` · ${formatTokens(group.inputTokens)} in / ${formatTokens(group.outputTokens)} out`}
         {group.errors > 0 && <span className="step__errors"> · {group.errors} error{group.errors === 1 ? '' : 's'}</span>}

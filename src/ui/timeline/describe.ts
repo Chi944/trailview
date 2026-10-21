@@ -27,6 +27,8 @@ export function describeEvent(parsed: ParsedEvent): { label: string; summary: st
       return { label: event.model, summary: 'started' }
     case 'tool.start':
       return { label: event.tool, summary: 'started' }
+    case 'agent.call':
+      return { label: `Sub-agent: ${event.agent.name}`, summary: event.error?.message ?? preview(event.output ?? event.input) }
     case 'approval.request':
       return { label: 'Approval requested', summary: event.summary }
     case 'approval.decision': {

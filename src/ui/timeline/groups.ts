@@ -13,14 +13,22 @@ export interface StepGroup {
   inputTokens: number
   outputTokens: number
   errors: number
+  // Items hidden because a sub-agent row above them is folded.
+  folded: number
 }
 
+// Key in the collapsed list for a folded sub-agent row.
+export const foldKey = (itemId: string) => `sub:${itemId}`
+
 // Groups consecutive items that share a step. Keys come from the unfiltered
-// list so a collapsed group stays collapsed while filters change.
-export function groupItems(items: TimelineItem[], filters: Filters): StepGroup[] {
+// list so a collapsed group stays collapsed while filters change. Items under
+// a folded sub-agent row (a `sub:<id>` key in `collapsed`) are left out.
+export function groupItems(items: TimelineItem[], filters: Filters, collapsed: string[] = []): StepGroup[] {
   const groups: StepGroup[] = []
   const seen = new Map<string, number>()
   let current: StepGroup | undefined
+  const folded = new Set(collapsed.filter((k) => k.startsWith('sub:')).map((k) => k.slice(4)))
+  const hidden = new Set<string>()
 
   for (const item of items) {
     const step = stepOf(item)
@@ -38,6 +46,7 @@ export function groupItems(items: TimelineItem[], filters: Filters): StepGroup[]
         inputTokens: 0,
         outputTokens: 0,
         errors: 0,
+        folded: 0,
       }
       groups.push(current)
     }
@@ -52,12 +61,18 @@ export function groupItems(items: TimelineItem[], filters: Filters): StepGroup[]
       }
     }
     if (itemHasError(item)) current.errors++
-    if (matchesFilters(item, filters)) current.items.push(item)
+    if (item.parentItemId && (hidden.has(item.parentItemId) || folded.has(item.parentItemId))) {
+      hidden.add(item.id)
+      current.folded++
+    } else if (matchesFilters(item, filters)) {
+      current.items.push(item)
+    }
   }
   return groups
 }
 
 export function stepOf(item: TimelineItem): number | undefined {
+  if (item.depth) return item.rootStep
   const step = item.events[0]!.event.step
   return typeof step === 'number' ? step : undefined
 }

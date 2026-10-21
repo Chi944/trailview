@@ -252,6 +252,9 @@ h2 {
 .kind--tool {
   --kind: #1f8a8a;
 }
+.kind--agent {
+  --kind: #b0458f;
+}
 .kind--approval {
   --kind: #c27a00;
 }
@@ -419,6 +422,25 @@ h2 {
   gap: 0.6rem;
   min-width: 0;
   white-space: nowrap;
+  padding-left: calc(var(--depth, 0) * 1.25rem);
+}
+
+/* A short elbow showing the row is nested under the row above it. */
+.row__nest {
+  flex: none;
+  width: 0.6rem;
+  margin-left: -0.9rem;
+  margin-right: -0.3rem;
+  border-left: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  height: 0.6rem;
+  align-self: flex-start;
+  margin-top: 0.2rem;
+}
+
+.badge--nested {
+  cursor: pointer;
+  color: var(--muted);
 }
 
 .row__label {

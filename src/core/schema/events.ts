@@ -124,6 +124,20 @@ export const toolStartSchema = envelopeSchema.extend({
   retry_of: nonEmpty.optional(),
 })
 
+// A sub-agent the run handed work to. Events the sub-agent wrote set
+// parent_id to this event's id and are shown nested under it.
+export const agentCallSchema = envelopeSchema.extend({
+  type: z.literal('agent.call'),
+  agent: z.looseObject({ name: nonEmpty, version: z.string().optional() }),
+  // The model's tool-call id that asked for this sub-agent, if any.
+  call_id: nonEmpty.optional(),
+  duration_ms: count,
+  status: z.enum(['ok', 'error']),
+  input: z.unknown().optional(),
+  output: z.unknown().optional(),
+  error: errorInfoSchema.optional(),
+})
+
 export const approvalRequestSchema = envelopeSchema.extend({
   type: z.literal('approval.request'),
   approval_id: nonEmpty,
@@ -159,6 +173,7 @@ export const knownEventSchema = z.discriminatedUnion('type', [
   toolCallSchema,
   modelStartSchema,
   toolStartSchema,
+  agentCallSchema,
   approvalRequestSchema,
   approvalDecisionSchema,
   errorEventSchema,
@@ -172,6 +187,7 @@ export const KNOWN_EVENT_TYPES = [
   'tool.call',
   'model.start',
   'tool.start',
+  'agent.call',
   'approval.request',
   'approval.decision',
   'error',
@@ -187,6 +203,7 @@ export type ModelCallEvent = z.infer<typeof modelCallSchema>
 export type ToolCallEvent = z.infer<typeof toolCallSchema>
 export type ModelStartEvent = z.infer<typeof modelStartSchema>
 export type ToolStartEvent = z.infer<typeof toolStartSchema>
+export type AgentCallEvent = z.infer<typeof agentCallSchema>
 export type ApprovalRequestEvent = z.infer<typeof approvalRequestSchema>
 export type ApprovalDecisionEvent = z.infer<typeof approvalDecisionSchema>
 export type ErrorEvent = z.infer<typeof errorEventSchema>

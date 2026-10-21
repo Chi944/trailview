@@ -74,6 +74,26 @@ test('open a run that crashed mid-call and see the call that never finished', as
   await expect(detail).toContainText('etl-worker-3')
 })
 
+test("see a sub-agent's work nested under it, fold it with the keyboard and read its totals", async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /Coding lead with sub-agents/ }).click()
+  const timeline = page.getByRole('listbox', { name: 'Run timeline' })
+  const explorer = timeline.getByRole('option', { name: /Sub-agent: explorer/ })
+  await expect(explorer).toContainText('9 nested')
+  await expect(timeline.getByRole('option', { name: /Sub-agent: code-search/ })).toBeVisible()
+
+  await explorer.click()
+  const detail = page.getByRole('complementary', { name: 'Sub-agent: explorer' })
+  await expect(detail).toContainText('Nested events (9)')
+  await expect(detail).toContainText('Model calls5')
+
+  await page.keyboard.press('ArrowLeft')
+  await expect(explorer).toContainText('9 nested, hidden')
+  await expect(timeline.getByRole('option', { name: /Sub-agent: code-search/ })).toBeHidden()
+  await page.keyboard.press('ArrowRight')
+  await expect(timeline.getByRole('option', { name: /Sub-agent: code-search/ })).toBeVisible()
+})
+
 test('compare two versions of an agent and see where they diverge', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: /Two runs to compare/ }).click()

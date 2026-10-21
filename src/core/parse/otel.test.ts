@@ -17,6 +17,7 @@ interface SpanInput {
   attrs?: Record<string, string | number>
   error?: string
   trace?: string
+  parent?: string
 }
 
 function otlp(spans: SpanInput[], service = 'svc'): string {
@@ -29,6 +30,7 @@ function otlp(spans: SpanInput[], service = 'svc'): string {
             spans: spans.map((s) => ({
               traceId: s.trace ?? 't1',
               spanId: s.id,
+              ...(s.parent && { parentSpanId: s.parent }),
               name: s.id,
               startTimeUnixNano: at(s.start),
               endTimeUnixNano: at(s.end),
@@ -110,6 +112,31 @@ describe('parseOtlp on the bundled support trace', () => {
 })
 
 describe('parseOtlp edge cases', () => {
+  it('turns a nested invoke_agent span into a sub-agent call that its spans nest under, with its own steps', () => {
+    const chat = (id: string, start: number, parent: string) => ({ id, op: 'chat', start, end: start + 1, parent, attrs: { 'gen_ai.request.model': 'm' } })
+    const text = otlp([
+      { id: 'root', op: 'invoke_agent', start: 0, end: 20, attrs: { 'gen_ai.agent.name': 'lead' } },
+      chat('c1', 1, 'root'),
+      { id: 'sub', op: 'invoke_agent', start: 3, end: 9, parent: 'root', attrs: { 'gen_ai.agent.name': 'researcher', 'gen_ai.agent.version': '2' } },
+      chat('s1', 4, 'sub'),
+      chat('s2', 6, 'sub'),
+      chat('c2', 10, 'root'),
+    ])
+    const ev = byId(text)
+    expect(ev.get('sub')).toMatchObject({ type: 'agent.call', step: 1, agent: { name: 'researcher', version: '2' }, duration_ms: 6000, status: 'ok' })
+    expect([ev.get('s1')!.step, ev.get('s2')!.step, ev.get('c2')!.step]).toEqual([1, 2, 2])
+    const [run] = buildRuns(parseOtlp(text).events)
+    expect(run!.items.map((i) => [i.id, i.depth])).toEqual([
+      ['root-start', 0],
+      ['c1', 0],
+      ['sub', 0],
+      ['s1', 1],
+      ['s2', 1],
+      ['c2', 0],
+      ['root-end', 0],
+    ])
+  })
+
   it('synthesises the run from the spans when there is no invoke_agent span', () => {
     const text = otlp(
       [

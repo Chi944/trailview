@@ -4,6 +4,7 @@ import { pairApprovals, type Approval } from '../derive/approvals.ts'
 import { foldRetries, type TimelineItem } from '../derive/retries.ts'
 import { computeTotals, type Totals } from '../derive/totals.ts'
 import { resolveStarts } from '../derive/starts.ts'
+import { nestItems } from '../derive/nesting.ts'
 import type { PriceTable } from '../pricing/prices.ts'
 
 export type RunStatus = 'succeeded' | 'failed' | 'cancelled' | 'incomplete'
@@ -75,7 +76,7 @@ function buildRun(id: string, unsorted: ParsedEvent[]): Run {
     startMs: events.length ? startMs : 0,
     endMs: events.length ? endMs : 0,
     events,
-    items: foldRetries(events),
+    items: nestItems(foldRetries(events)),
     approvals,
     totals: computeTotals(events, approvals, wallMs, start?.pricing),
     pricing: start?.pricing ?? {},

@@ -1,7 +1,9 @@
 import type { Run } from '../../core/model/run.ts'
 import type { Approval } from '../../core/derive/approvals.ts'
-import { callCost } from '../../core/derive/totals.ts'
-import type { ErrorEvent, LogEvent, ModelCallEvent, RunEndEvent, RunStartEvent, ToolCallEvent } from '../../core/schema/events.ts'
+import { callCost, computeTotals } from '../../core/derive/totals.ts'
+import { descendantsOf } from '../../core/derive/nesting.ts'
+import type { TimelineItem } from '../../core/derive/retries.ts'
+import type { AgentCallEvent, ErrorEvent, LogEvent, ModelCallEvent, RunEndEvent, RunStartEvent, ToolCallEvent } from '../../core/schema/events.ts'
 import { formatDuration, formatTokens, formatUsd } from '../format.ts'
 import { JsonView } from './JsonView.tsx'
 import { ErrorBox, Fields, Payload, Section } from './parts.tsx'
@@ -149,5 +151,50 @@ export function LogDetail({ event }: { event: LogEvent }) {
       <Fields rows={[['Level', event.level]]} />
       <pre className="text-block">{event.message}</pre>
     </>
+  )
+}
+
+export function AgentCallDetail({ event }: { event: AgentCallEvent }) {
+  return (
+    <>
+      <Fields
+        rows={[
+          ['Sub-agent', event.agent.name],
+          ['Version', event.agent.version],
+          ['Status', event.status],
+          ['Duration', formatDuration(event.duration_ms)],
+        ]}
+      />
+      {event.error && <ErrorBox error={event.error} />}
+      <Section title="Input">
+        <Payload value={event.input} />
+      </Section>
+      <Section title="Output">
+        <Payload value={event.output} />
+      </Section>
+    </>
+  )
+}
+
+// What the events nested under a row (a sub-agent's work) added up to.
+export function NestedSummary({ run, item }: { run: Run; item: TimelineItem }) {
+  const nested = descendantsOf(run.items, item.id)
+  const events = nested.flatMap((i) => i.events)
+  const ids = new Set(events.map((e) => e.event.id))
+  const approvals = run.approvals.filter((a) => (a.request && ids.has(a.request.id)) || (a.decision && ids.has(a.decision.id)))
+  const totals = computeTotals(events, approvals, 0, run.pricing)
+  return (
+    <Section title={`Nested events (${nested.length})`}>
+      <Fields
+        rows={[
+          ['Model calls', String(totals.modelCalls)],
+          ['Tool calls', String(totals.toolCalls)],
+          ['Tokens', `${formatTokens(totals.inputTokens)} in / ${formatTokens(totals.outputTokens)} out`],
+          ['Cost', `${formatUsd(totals.costUsd)}${totals.costEstimated ? ' est.' : ''}`],
+          ['Errors', totals.errors ? String(totals.errors) : undefined],
+          ['Approvals', totals.approvals ? String(totals.approvals) : undefined],
+        ]}
+      />
+    </Section>
   )
 }

@@ -24,6 +24,12 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.keyboard.press('Escape')
 
     await page.getByRole('button', { name: 'Close file' }).click()
+    await page.getByRole('button', { name: /Coding lead with sub-agents/ }).click()
+    await page.getByRole('option', { name: /Sub-agent: explorer/ }).click()
+    await expect(page.getByRole('complementary')).toBeVisible()
+    expect(await scan(page)).toEqual([])
+
+    await page.getByRole('button', { name: 'Close file' }).click()
     await page.getByRole('button', { name: /Two runs to compare/ }).click()
     await page.getByRole('button', { name: 'Compare' }).click()
     expect(await scan(page)).toEqual([])

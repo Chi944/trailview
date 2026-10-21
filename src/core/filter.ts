@@ -1,12 +1,13 @@
 import type { ParsedEvent } from './parse/jsonl.ts'
 import type { TimelineItem } from './derive/retries.ts'
 
-export const CATEGORIES = ['model', 'tool', 'approval', 'error', 'log', 'run', 'other'] as const
+export const CATEGORIES = ['model', 'tool', 'agent', 'approval', 'error', 'log', 'run', 'other'] as const
 export type Category = (typeof CATEGORIES)[number]
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   model: 'Model calls',
   tool: 'Tool calls',
+  agent: 'Sub-agents',
   approval: 'Approvals',
   error: 'Errors',
   log: 'Logs',
@@ -31,6 +32,8 @@ export function categoryOf(parsed: ParsedEvent): Category {
     case 'tool.call':
     case 'tool.start':
       return 'tool'
+    case 'agent.call':
+      return 'agent'
     case 'approval.request':
     case 'approval.decision':
       return 'approval'
@@ -50,6 +53,7 @@ export function isErrorEvent(parsed: ParsedEvent): boolean {
   switch (event.type) {
     case 'model.call':
     case 'tool.call':
+    case 'agent.call':
       return event.status === 'error'
     case 'error':
       return true

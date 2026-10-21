@@ -7,7 +7,7 @@ import { formatDuration } from '../format.ts'
 import { describeEvent } from './describe.ts'
 import { itemSpan } from './groups.ts'
 
-interface Props {
+export interface RowProps {
   item: TimelineItem
   runStartMs: number
   runWallMs: number
@@ -20,13 +20,16 @@ interface Props {
   position?: number
   setSize?: number
   style?: CSSProperties
+  // Set on a row with events nested under it (a sub-agent's work).
+  folded?: boolean
+  onToggleFold?: () => void
 }
 
 export function rowDomId(id: string): string {
   return `row-${id}`
 }
 
-export function TimelineRow({ item, runStartMs, runWallMs, selected, approval, onClick, stepLabel, position, setSize, style }: Props) {
+export function TimelineRow({ item, runStartMs, runWallMs, selected, approval, onClick, stepLabel, position, setSize, style, folded, onToggleFold }: RowProps) {
   const first = item.events[0]!
   const final = item.events[item.events.length - 1]!
   const category = categoryOf(first)
@@ -52,11 +55,24 @@ export function TimelineRow({ item, runStartMs, runWallMs, selected, approval, o
       {stepLabel && <span className="visually-hidden">{stepLabel}: </span>}
       <span className="row__offset">+{formatDuration(startMs - runStartMs)}</span>
       <span className={`row__kind kind--${category}`} aria-hidden="true" />
-      <span className="row__text">
+      <span className="row__text" style={item.depth ? ({ '--depth': item.depth } as CSSProperties) : undefined}>
+        {item.depth ? <span className="row__nest" aria-hidden="true" /> : null}
         <span className="row__label">{label}</span>
         {summary && <span className="row__summary">{summary}</span>}
       </span>
       <span className="row__badges">
+        {onToggleFold && (
+          // Mouse shortcut for ←/→; the state is in the text so screen readers hear it too.
+          <span
+            className="badge badge--nested"
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggleFold()
+            }}
+          >
+            {folded ? '▸' : '▾'} {item.descendants} nested{folded ? ', hidden' : ''}
+          </span>
+        )}
         {item.events.length > 1 && <span className="badge badge--retry">{item.events.length} attempts</span>}
         {approval && first.event.type === 'approval.request' && (
           <span className={`badge badge--${approval.outcome}`}>{approval.outcome}</span>

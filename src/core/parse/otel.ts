@@ -167,13 +167,30 @@ function traceToEvents(spans: Span[]): EventRecord[] {
     attrs: { source: 'otlp', trace_id: runId, ...(root && { span_id: root.spanId }) },
   })
 
-  let step = 0
-  let lastModel: { id: string; error: boolean; model: string } | undefined
+  // Steps and model retries are tracked per agent, so a sub-agent's calls
+  // number their own steps and do not split the parent's.
+  const spanById = new Map(spans.map((s) => [s.spanId, s]))
+  const agentOf = (span: Span): string => {
+    const seen = new Set<string>()
+    let parent = span.parentSpanId ? spanById.get(span.parentSpanId) : undefined
+    while (parent && !seen.has(parent.spanId)) {
+      if (parent !== root && parent.attrs['gen_ai.operation.name'] === 'invoke_agent') return parent.spanId
+      seen.add(parent.spanId)
+      parent = parent.parentSpanId ? spanById.get(parent.parentSpanId) : undefined
+    }
+    return ''
+  }
+  const agents = new Map<string, { step: number; lastModel?: { id: string; error: boolean; model: string } }>()
   const toolAttempts = new Map<string, { id: string; attempt: number; error: boolean }>()
 
   for (const span of spans) {
     if (span === root) continue
     const op = span.attrs['gen_ai.operation.name'] as string
+    const agentKey = agentOf(span)
+    const agent = agents.get(agentKey) ?? { step: 0 }
+    agents.set(agentKey, agent)
+    let step = agent.step
+    const lastModel = agent.lastModel
     const common = {
       id: span.spanId,
       ts: iso(span.startMs),
@@ -205,7 +222,8 @@ function traceToEvents(spans: Span[]): EventRecord[] {
         ...(retry && { attempt: 2, retry_of: retry.id }),
         ...(error && { error }),
       })
-      lastModel = { id: span.spanId, error: span.error, model }
+      agent.step = step
+      agent.lastModel = { id: span.spanId, error: span.error, model }
       continue
     }
 
@@ -231,17 +249,23 @@ function traceToEvents(spans: Span[]): EventRecord[] {
       })
       for (const approval of approvals) add(span.line, approval)
       if (callId) toolAttempts.set(callId, { id: span.spanId, attempt: (retry?.attempt ?? 0) + 1, error: span.error })
-      lastModel = undefined
+      agent.lastModel = undefined
       continue
     }
 
     if (op === 'invoke_agent') {
+      const version = str(span.attrs['gen_ai.agent.version'])
+      const output = outputOf(span.attrs['gen_ai.output.messages'])
       add(span.line, {
-        type: 'log',
+        type: 'agent.call',
         ...common,
         ...(step > 0 && { step }),
-        level: span.error ? 'warn' : 'info',
-        message: `Sub-agent ${str(span.attrs['gen_ai.agent.name']) ?? span.name} ran for ${duration_ms} ms${span.error ? ' and failed' : ''}`,
+        agent: { name: str(span.attrs['gen_ai.agent.name']) ?? span.name, ...(version && { version }) },
+        duration_ms,
+        status: span.error ? 'error' : 'ok',
+        ...(span.attrs['gen_ai.input.messages'] !== undefined && { input: promptOf(span.attrs['gen_ai.input.messages']) }),
+        ...(output?.text !== undefined && { output: output.text }),
+        ...(error && { error }),
       })
       continue
     }
