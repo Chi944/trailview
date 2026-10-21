@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Run } from '../../core/model/run.ts'
 import type { TimelineItem } from '../../core/derive/retries.ts'
 import type { ParsedEvent } from '../../core/parse/jsonl.ts'
@@ -46,9 +46,12 @@ export function DetailPanel({ run, item, onClose }: Props) {
             {label}
           </h2>
         </div>
-        <button type="button" className="button" onClick={onClose} aria-label="Close details (Esc)">
-          ✕
-        </button>
+        <div className="detail__actions">
+          <CopyLink key={item.id} />
+          <button type="button" className="button" onClick={onClose} aria-label="Close details (Esc)">
+            ✕
+          </button>
+        </div>
       </header>
       <Fields
         rows={[
@@ -74,6 +77,27 @@ export function DetailPanel({ run, item, onClose }: Props) {
         ))}
       </Section>
     </aside>
+  )
+}
+
+// The address bar already links to the open event, so copying it is enough.
+// Keyed by the event, so the feedback resets when another event opens.
+function CopyLink() {
+  const [copied, setCopied] = useState<'copied' | 'failed'>()
+  const copy = () =>
+    navigator.clipboard.writeText(location.href).then(
+      () => setCopied('copied'),
+      () => setCopied('failed'),
+    )
+  return (
+    <>
+      <button type="button" className="button" onClick={() => void copy()}>
+        Copy link
+      </button>
+      <span role="status" className="muted">
+        {copied === 'copied' ? 'Copied' : copied === 'failed' ? 'Copy the address bar instead' : ''}
+      </span>
+    </>
   )
 }
 

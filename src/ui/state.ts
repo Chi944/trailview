@@ -2,9 +2,12 @@ import type { ParseIssue } from '../core/parse/jsonl.ts'
 import { parseLog, type LogFormat } from '../core/parse/detect.ts'
 import { buildRuns, type Run } from '../core/model/run.ts'
 import { NO_FILTERS, type Category, type Filters } from '../core/filter.ts'
+import type { LinkTarget } from './link.ts'
 
 export interface LoadedFile {
   name: string
+  // True for a bundled sample, so links to it can reopen it.
+  sample?: boolean
   format: LogFormat
   runs: Run[]
   issues: ParseIssue[]
@@ -23,6 +26,9 @@ export interface AppState {
   // Compare mode: true while picking or viewing a comparison; `compare` is the other run's file.
   comparing: boolean
   compare?: CompareSide
+  // A link the page was opened with, waiting for its file; and what went wrong applying one.
+  target?: LinkTarget
+  linkMiss?: string
 }
 
 // The run compared against the current one, and the file it came from.
@@ -34,7 +40,8 @@ export interface CompareSide {
 }
 
 export type AppAction =
-  | { type: 'loaded'; name: string; text: string }
+  | { type: 'loaded'; name: string; text: string; sample?: boolean }
+  | { type: 'linkOpened'; target: LinkTarget }
   | { type: 'loadFailed'; message: string }
   | { type: 'selectRun'; index: number }
   | { type: 'close' }
@@ -53,14 +60,33 @@ export type AppAction =
   | { type: 'selectCompareRun'; index: number }
   | { type: 'changeCompare' }
 
+// Opens the run and event a link names in the loaded file, expanding and
+// unfiltering so the event is in view. Says so when the file lacks them.
+export function applyTarget(state: AppState, target: LinkTarget): AppState {
+  const file = state.file
+  if (!file) return { ...state, target }
+  const base: AppState = { ...state, target: undefined, linkMiss: undefined, comparing: false, compare: undefined }
+  const runIndex = target.run ? file.runs.findIndex((r) => r.id === target.run) : 0
+  if (runIndex < 0) return { ...base, linkMiss: `The link points to run ${target.run}, which is not in ${file.name}.` }
+  const run = file.runs[runIndex]!
+  const atRun = { ...base, runIndex, selectedId: undefined, detailOpen: false, collapsed: [], filters: NO_FILTERS }
+  if (!target.event) return atRun
+  const item = run.items.find((i) => i.events.some((e) => e.event.id === target.event))
+  if (!item) return { ...atRun, linkMiss: `The link points to event ${target.event}, which is not in run ${run.id}.` }
+  return { ...atRun, selectedId: item.id, detailOpen: true }
+}
+
 export const initialState: AppState = { runIndex: 0, filters: NO_FILTERS, detailOpen: false, collapsed: [], comparing: false }
 
 export function reducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'loaded': {
       const { format, events, issues } = parseLog(action.text)
-      return { ...initialState, file: { name: action.name, format, runs: buildRuns(events), issues } }
+      const loaded: AppState = { ...initialState, file: { name: action.name, format, runs: buildRuns(events), issues, sample: action.sample } }
+      return state.target ? applyTarget(loaded, state.target) : loaded
     }
+    case 'linkOpened':
+      return state.file ? applyTarget(state, action.target) : { ...state, target: action.target, linkMiss: undefined }
     case 'loadFailed':
       return { ...state, loadError: action.message }
     case 'selectRun':
