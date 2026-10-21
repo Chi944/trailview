@@ -25,7 +25,7 @@ A Trailview log is a text file with one JSON object per line. Each line is one e
 | `id` | string | yes | Unique within the run. Other events refer to it. |
 | `ts` | string | yes | ISO 8601 UTC with milliseconds. For calls, this is the **start** time. |
 | `step` | integer ≥ 1 | no | The agent-loop iteration this event belongs to. The timeline groups by it. |
-| `parent_id` | string | no | Reserved for nesting (sub-agents). Ignored by the MVP UI. |
+| `parent_id` | string | no | The `id` of the event this one is nested under, usually the `agent.call` of the sub-agent that wrote it. See *Sub-agents* below. |
 | `attrs` | object | no | Free-form extra data, shown in the detail panel as key/value pairs. |
 
 Ordering: the viewer sorts by `ts`, then by file order for ties.
@@ -82,6 +82,17 @@ Ordering: the viewer sorts by `ts`, then by file order for ties.
 
 A start line is folded into the finished call whose `start_id` names it, or, for tools, the `tool.call` with the same `call_id`. A start line with no finished call is shown as an **unfinished** call: status error, with an "unfinished" badge, lasting from its start until the last moment the log covers. It counts as a call and an error in the totals. Writers that only log finished calls can ignore these lines.
 
+**`agent.call`**: the run handed work to a sub-agent.
+
+| Field | Type | Req. | Notes |
+|---|---|---|---|
+| `agent` | `{ name, version? }` | yes | The sub-agent. |
+| `duration_ms` | integer | yes | |
+| `status` | `"ok" \| "error"` | yes | |
+| `call_id` | string | no | The model tool-call id that asked for the sub-agent (a `Task` tool, for example). |
+| `input`, `output` | any JSON | no | The task it was given and what it returned. |
+| `error` | Error | no | When `status` is `error`. |
+
 **`approval.request`**: the agent paused for a person.
 
 | Field | Type | Req. | Notes |
@@ -107,6 +118,14 @@ The viewer computes wait time as `decision.ts − request.ts`. A rejected reques
 
 **`log`**: a free-text note from the agent. Fields: `level` (`debug|info|warn`), `message`.
 
+## Sub-agents
+
+Every event a sub-agent writes sets `parent_id` to the `id` of its `agent.call`. A sub-agent that starts its own sub-agent writes another `agent.call` with `parent_id` set the same way, so nesting can go as deep as the agents do. `parent_id` may also name a `tool.call` when a tool runs an agent internally.
+
+The timeline lists nested events straight under the row that started them, indented, in the step of that row; the sub-agent's own `step` numbers show in its events' details. A row with nested events has a "N nested" badge: click it, or press ← and → on the row, to fold and unfold it. The detail panel adds the nested events' model calls, tool calls, tokens and cost. Run totals include every nested call, because it was really spent. A failed `agent.call` is marked as an error on its row and shows under "Errors only", but the run's error total counts only the failed calls and `error` events inside it, so one failure is not counted twice.
+
+An event whose `parent_id` names nothing in the run is shown at the top level.
+
 ## Shared shapes
 
 **Error**: `{ type: string, message: string, retryable?: boolean, code?: string | number }`
@@ -128,7 +147,7 @@ Trailview also opens OpenTelemetry traces in OTLP/JSON: the format the Collector
 | no `invoke_agent` span | the run spans the first to the last GenAI span; the agent is `service.name`, and the run failed if any span failed |
 | `chat`, `text_completion`, `generate_content` | `model.call` |
 | `execute_tool` | `tool.call` (`gen_ai.tool.name`, `gen_ai.tool.call.id`, `gen_ai.tool.call.arguments`, `gen_ai.tool.call.result`) |
-| nested `invoke_agent` | a `log` row naming the sub-agent |
+| nested `invoke_agent` | `agent.call`; the spans under it nest under it and number their own steps |
 | any other GenAI operation (`embeddings`, `retrieval`, memory operations) | a generic row of type `otel.<operation>` with the span attributes |
 | span without `gen_ai.operation.name` | skipped, with one warning giving the count |
 | `gen_ai.provider.name`, `gen_ai.response.model` (else `gen_ai.request.model`) | `provider`, `model` |

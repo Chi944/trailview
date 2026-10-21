@@ -64,12 +64,17 @@ export function summarizeSteps(run: Run): StepSummary[] {
     return summary
   }
 
+  // A sub-agent's events count toward the step of the call that started it.
+  const nestedStep = new Map<string, number | undefined>()
+  for (const item of run.items) if (item.depth) for (const e of item.events) nestedStep.set(e.event.id, item.rootStep)
+
   for (const parsed of run.events) {
     if (parsed.kind !== 'known') continue
     const event = parsed.event
-    if (event.step === undefined) continue
+    const step = nestedStep.has(event.id) ? nestedStep.get(event.id) : event.step
+    if (step === undefined) continue
     const ts = Date.parse(event.ts)
-    const summary = get(event.step, ts)
+    const summary = get(step, ts)
     const duration = 'duration_ms' in event && typeof event.duration_ms === 'number' ? event.duration_ms : 0
     summary.startMs = Math.min(summary.startMs, ts)
     summary.endMs = Math.max(summary.endMs, ts + duration)

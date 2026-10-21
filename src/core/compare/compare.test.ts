@@ -30,6 +30,19 @@ describe('summarizeSteps', () => {
     expect(two).toMatchObject({ step: 2, tools: [], costUsd: 0.02, durationMs: 1000 })
   })
 
+  it("counts a sub-agent's calls toward the step of the call that started it", () => {
+    const [run] = runsFrom([
+      model('m1', 1, 0),
+      ev({ type: 'agent.call', id: 'a1', step: 2, ts: at(1), agent: { name: 'sub' }, duration_ms: 3000, status: 'ok' }),
+      model('sm1', 1, 1.5, { parent_id: 'a1' }),
+      tool('st1', 1, 2, 'grep', { parent_id: 'a1' }),
+    ])
+    expect(summarizeSteps(run!).map((s) => [s.step, s.tools, s.inputTokens])).toEqual([
+      [1, [], 100],
+      [2, ['grep'], 100],
+    ])
+  })
+
   it('records approvals with their outcome on the step they were requested', () => {
     const [run] = runsFrom([
       model('m1', 1, 0),

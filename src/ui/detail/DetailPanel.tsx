@@ -9,10 +9,12 @@ import { describeEvent } from '../timeline/describe.ts'
 import { JsonView } from './JsonView.tsx'
 import { Fields, Section } from './parts.tsx'
 import {
+  AgentCallDetail,
   ApprovalDetail,
   ErrorDetail,
   LogDetail,
   ModelCallDetail,
+  NestedSummary,
   RunEndDetail,
   RunStartDetail,
   ToolCallDetail,
@@ -57,6 +59,7 @@ export function DetailPanel({ run, item, onClose }: Props) {
       />
       {item.events.length > 1 && <Attempts events={item.events} />}
       <Body parsed={final} run={run} />
+      {item.descendants ? <NestedSummary run={run} item={item} /> : null}
       {attrs && Object.keys(attrs).length > 0 && (
         <Section title="Attributes">
           <Fields rows={Object.entries(attrs).map(([k, v]) => [k, typeof v === 'object' ? <JsonView value={v} /> : String(v)])} />
@@ -110,6 +113,8 @@ function Body({ parsed, run }: { parsed: ParsedEvent; run: Run }) {
       const approval = run.approvals.find((a) => a.approvalId === event.approval_id)
       return approval ? <ApprovalDetail approval={approval} /> : null
     }
+    case 'agent.call':
+      return <AgentCallDetail event={event} />
     case 'run.start':
       return <RunStartDetail event={event} />
     case 'run.end':

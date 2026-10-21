@@ -5,7 +5,7 @@ export const SHORTCUTS: [string, string][] = [
   ['Page Up / Page Down', 'Move ten events'],
   ['Home / End', 'First or last event'],
   ['Enter', 'Open the selected event'],
-  ['← →', 'Collapse or expand the current step'],
+  ['← →', 'Fold or unfold the sub-agent on the current row, or else collapse or expand its step'],
   ['Esc', 'Close the detail panel or this list'],
   ['/', 'Search events'],
   ['e', 'Toggle errors only'],

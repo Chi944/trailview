@@ -29,6 +29,11 @@ export const SAMPLES: Sample[] = [
     load: () => text(import('../../../samples/research-brief.jsonl?raw')),
   },
   {
+    file: 'dev-lead-subagents.jsonl',
+    title: 'Coding lead with sub-agents: an explorer (with its own helper) and a test runner that retries an install',
+    load: () => text(import('../../../samples/dev-lead-subagents.jsonl?raw')),
+  },
+  {
     file: 'backfill-crashed.jsonl',
     title: 'Data backfill agent: the worker dies mid-extract, leaving a call that never finished',
     load: () => text(import('../../../samples/backfill-crashed.jsonl?raw')),

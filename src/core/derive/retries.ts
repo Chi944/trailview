@@ -5,6 +5,13 @@ import type { ParsedEvent } from '../parse/jsonl.ts'
 export interface TimelineItem {
   id: string
   events: ParsedEvent[]
+  // Set by nestItems: how deep the row sits under sub-agents, the item it
+  // is nested under, the step of its top-level ancestor (which decides its
+  // step group), and how many items are nested under it at any depth.
+  depth?: number
+  parentItemId?: string
+  rootStep?: number
+  descendants?: number
 }
 
 export function lastEvent(item: TimelineItem): ParsedEvent {

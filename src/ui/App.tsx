@@ -6,6 +6,7 @@ import { RunHeader } from './run/RunHeader.tsx'
 import { TotalsBar } from './run/TotalsBar.tsx'
 import { FilterBar, SEARCH_INPUT_ID } from './run/FilterBar.tsx'
 import { Timeline } from './timeline/Timeline.tsx'
+import { descendantsOf } from '../core/derive/nesting.ts'
 import { groupItems } from './timeline/groups.ts'
 import { ShortcutHelp } from './a11y/ShortcutHelp.tsx'
 import { DetailPanel } from './detail/DetailPanel.tsx'
@@ -23,7 +24,7 @@ export function App() {
   const onError = (message: string) => dispatch({ type: 'loadFailed', message })
 
   const run = state.file?.runs[state.runIndex]
-  const groups = useMemo(() => (run ? groupItems(run.items, state.filters) : []), [run, state.filters])
+  const groups = useMemo(() => (run ? groupItems(run.items, state.filters, state.collapsed) : []), [run, state.filters, state.collapsed])
   const shown = groups.reduce((n, g) => n + g.items.length, 0)
   const detailItem = state.detailOpen ? run?.items.find((i) => i.id === state.selectedId) : undefined
 
@@ -117,7 +118,14 @@ export function App() {
             selectedId={state.selectedId}
             onSelect={(id) => dispatch({ type: 'select', id })}
             onOpen={(id) => dispatch({ type: 'openDetail', id })}
-            onCollapse={(key, collapsed) => dispatch({ type: 'setCollapsed', key, collapsed })}
+            onCollapse={(key, collapsed) => {
+              dispatch({ type: 'setCollapsed', key, collapsed })
+              // Folding a sub-agent that holds the selection moves the selection to the folded row.
+              const parentId = key.startsWith('sub:') ? key.slice(4) : undefined
+              if (collapsed && parentId && descendantsOf(run.items, parentId).some((i) => i.id === state.selectedId)) {
+                dispatch({ type: 'select', id: parentId })
+              }
+            }}
           />
           {detailItem && <DetailPanel run={run} item={detailItem} onClose={() => dispatch({ type: 'closeDetail' })} />}
           </div>

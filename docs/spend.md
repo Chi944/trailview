@@ -8,3 +8,4 @@ Budget: US$10 of Claude API credits, used only to generate realistic sample trac
 | 2026-10-20 | LangSmith sample (`samples/langsmith-sql-analyst.json`) written by hand with a script, no API calls | 0.00 | 0.00 | 0.00 |
 | 2026-10-20 | Second on-call run for comparison (`samples/oncall-digest-two-versions.jsonl`) derived by script from the existing sample, no API calls | 0.00 | 0.00 | 0.00 |
 | 2026-10-20 | Crashed backfill run (`samples/backfill-crashed.jsonl`) written by hand with a script, no API calls | 0.00 | 0.00 | 0.00 |
+| 2026-10-21 | Sub-agent run (`samples/dev-lead-subagents.jsonl`) written by hand with a script, no API calls | 0.00 | 0.00 | 0.00 |
