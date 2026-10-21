@@ -5,9 +5,11 @@ import { SampleMenu } from './import/SampleMenu.tsx'
 import { SAMPLES } from './import/samples.ts'
 import { RunHeader } from './run/RunHeader.tsx'
 import { TotalsBar } from './run/TotalsBar.tsx'
+import { CostBreakdown } from './run/CostBreakdown.tsx'
 import { FilterBar, SEARCH_INPUT_ID } from './run/FilterBar.tsx'
 import { Timeline } from './timeline/Timeline.tsx'
 import { descendantsOf } from '../core/derive/nesting.ts'
+import { matchesFilters, queryTerms } from '../core/filter.ts'
 import { groupItems } from './timeline/groups.ts'
 import { ShortcutHelp } from './a11y/ShortcutHelp.tsx'
 import { DetailPanel } from './detail/DetailPanel.tsx'
@@ -25,6 +27,7 @@ export function App() {
   // A link's target is read before the first render, so the hash is not cleared before it is used.
   const [state, dispatch] = useReducer(reducer, undefined, (): AppState => ({ ...initialState, target: parseLink(location.hash) }))
   const [helpOpen, setHelpOpen] = useState(false)
+  const [breakdownOpen, setBreakdownOpen] = useState(false)
   const load = (name: string, text: string) => dispatch({ type: 'loaded', name, text })
   const loadSample = (name: string, text: string) => dispatch({ type: 'loaded', name, text, sample: true })
   const onError = (message: string) => dispatch({ type: 'loadFailed', message })
@@ -57,6 +60,14 @@ export function App() {
   }, [state.target, state.file, run, linkedEvent])
   const groups = useMemo(() => (run ? groupItems(run.items, state.filters, state.collapsed) : []), [run, state.filters, state.collapsed])
   const shown = groups.reduce((n, g) => n + g.items.length, 0)
+  // With a search in effect, the other runs in the file that have matches too.
+  const otherMatches = useMemo(() => {
+    const runs = state.file?.runs ?? []
+    if (runs.length < 2 || queryTerms(state.filters.text).length === 0) return []
+    return runs
+      .map((r, index) => ({ index, id: r.id, count: r.items.filter((i) => matchesFilters(i, state.filters)).length }))
+      .filter((m) => m.index !== state.runIndex && m.count > 0)
+  }, [state.file, state.filters, state.runIndex])
   const detailItem = state.detailOpen ? run?.items.find((i) => i.id === state.selectedId) : undefined
 
   const keys = useMemo(
@@ -65,6 +76,7 @@ export function App() {
       '/': () => document.getElementById(SEARCH_INPUT_ID)?.focus(),
       t: () => document.querySelector<HTMLElement>(TIMELINE_SELECTOR)?.focus(),
       e: () => dispatch({ type: 'setErrorsOnly', value: !state.filters.errorsOnly }),
+      c: () => setBreakdownOpen((open) => !open),
       Escape: () => {
         if (helpOpen) setHelpOpen(false)
         else if (state.comparing) dispatch({ type: 'stopCompare' })
@@ -138,6 +150,7 @@ export function App() {
       ) : run ? (
         <>
           <TotalsBar totals={run.totals} />
+          <CostBreakdown run={run} open={breakdownOpen} onToggle={setBreakdownOpen} />
           <FilterBar
             run={run}
             filters={state.filters}
@@ -146,6 +159,8 @@ export function App() {
             onErrorsOnly={(value) => dispatch({ type: 'setErrorsOnly', value })}
             onText={(text) => dispatch({ type: 'setText', text })}
             onClear={() => dispatch({ type: 'clearFilters' })}
+            otherMatches={otherMatches}
+            onSelectRun={(index) => dispatch({ type: 'selectRun', index })}
           >
             <ExportButtons
               fileName={`${run.id.replace(/[^\w.-]+/g, '_')}.md`}
@@ -167,6 +182,7 @@ export function App() {
             selectedId={state.selectedId}
             onSelect={(id) => dispatch({ type: 'select', id })}
             onOpen={(id) => dispatch({ type: 'openDetail', id })}
+            terms={queryTerms(state.filters.text)}
             onCollapse={(key, collapsed) => {
               dispatch({ type: 'setCollapsed', key, collapsed })
               // Folding a sub-agent that holds the selection moves the selection to the folded row.

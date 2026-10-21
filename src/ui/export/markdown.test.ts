@@ -18,6 +18,8 @@ describe('runMarkdown', () => {
     expect(md).toContain(`${run!.items.length} events:`)
     expect(tableRows(md)).toHaveLength(run!.items.length)
     expect(md).toContain('| ↳ Sub-agent: code-search `e008` |')
+    expect(md).toMatch(/\*\*Cost by model\*\* claude-opus-5-5 \$\S+ (est\. )?\(4 calls, \d+%\) · claude-haiku-5-5 /)
+    expect(md).toMatch(/\*\*Cost by agent\*\* dev-lead \$\S+ .* · ↳ explorer .* · ↳ ↳ code-search .* · ↳ test-runner /)
     expect(md).toContain('Exported from [Trailview](https://x.test/#sample=dev-lead-subagents.jsonl&run=run_lead_8d41)')
   })
 

@@ -186,3 +186,41 @@ test('copy or download the filtered view as Markdown to paste into an issue', as
   await page.getByRole('button', { name: 'Download .md' }).click()
   expect((await download).suggestedFilename()).toMatch(/\.md$/)
 })
+
+test('search shows where each event matched and which other runs match', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /Two runs to compare/ }).click()
+  const search = page.getByRole('searchbox', { name: 'Search events' })
+  await search.fill('"first error line"')
+
+  const options = page.getByRole('listbox', { name: 'Run timeline' }).getByRole('option')
+  await expect(options.first().locator('mark')).toHaveText('first error line')
+  await expect(options.first().locator('.row__hit-path')).toHaveText('input:')
+
+  await search.fill('tool:send_email')
+  await expect(options.first().locator('mark')).toHaveText('send_email')
+  const other = page.getByRole('search').getByRole('button', { name: /run_oncall_9c21/ })
+  await expect(other).toBeVisible()
+  await other.click()
+  await expect(page).toHaveURL(/run=run_oncall_9c21/)
+  await expect(search).toHaveValue('tool:send_email')
+  await expect(options.first().locator('mark')).toHaveText('send_email')
+})
+
+test('break the cost down by model and by sub-agent', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /Coding lead with sub-agents/ }).click()
+  const byAgent = page.getByRole('table', { name: 'By agent' })
+  await expect(byAgent).toBeHidden()
+
+  await page.keyboard.press('c')
+  const byModel = page.getByRole('table', { name: 'By model' })
+  await expect(byModel.getByRole('rowheader')).toHaveText(['claude-opus-5-5', 'claude-haiku-5-5'])
+  await expect(byAgent.getByRole('rowheader')).toHaveText([/dev-lead/, /explorer e003/, /code-search e008/, /test-runner e016/])
+  await expect(byAgent.getByRole('row', { name: /dev-lead/ }).getByRole('cell').last()).toHaveText(
+    (await page.locator('.totals__item', { hasText: 'Cost' }).locator('dd').innerText()).replace(' *', ''),
+  )
+
+  await page.keyboard.press('c')
+  await expect(byAgent).toBeHidden()
+})

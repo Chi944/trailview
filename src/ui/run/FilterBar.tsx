@@ -10,13 +10,16 @@ interface Props {
   onErrorsOnly: (value: boolean) => void
   onText: (text: string) => void
   onClear: () => void
+  // Other runs in the file with events matching the search, to jump to.
+  otherMatches?: { index: number; id: string; count: number }[]
+  onSelectRun?: (index: number) => void
   // Actions on the filtered view, shown at the end of the bar.
   children?: ReactNode
 }
 
 export const SEARCH_INPUT_ID = 'timeline-search'
 
-export function FilterBar({ run, filters, shown, onToggle, onErrorsOnly, onText, onClear, children }: Props) {
+export function FilterBar({ run, filters, shown, onToggle, onErrorsOnly, onText, onClear, otherMatches = [], onSelectRun, children }: Props) {
   const counts = new Map<Category, number>()
   for (const item of run.items) {
     const c = categoryOf(item.events[0]!)
@@ -49,12 +52,27 @@ export function FilterBar({ run, filters, shown, onToggle, onErrorsOnly, onText,
         className="filters__search"
         placeholder="Search events  /"
         aria-label="Search events"
+        aria-describedby="search-hint"
+        title='Words and "quoted phrases" must all appear. Narrow a term to one field with model:, tool:, agent:, status:, type: or step:'
         value={filters.text}
         onChange={(e) => onText(e.target.value)}
       />
+      <span id="search-hint" className="visually-hidden">
+        Words and quoted phrases must all appear. Narrow a term to one field with model:, tool:, agent:, status:, type: or step:.
+      </span>
       <span className="muted filters__count" aria-live="polite">
         {shown} of {run.items.length} shown
       </span>
+      {otherMatches.length > 0 && onSelectRun && (
+        <span className="filters__runs">
+          <span className="muted">Also in</span>
+          {otherMatches.map((m) => (
+            <button key={m.id} type="button" className="chip" onClick={() => onSelectRun(m.index)}>
+              <span className="mono">{m.id}</span> <span className="muted">{m.count}</span>
+            </button>
+          ))}
+        </span>
+      )}
       {active && (
         <button type="button" className="button button--link" onClick={onClear}>
           Clear filters

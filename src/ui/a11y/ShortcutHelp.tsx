@@ -9,6 +9,7 @@ export const SHORTCUTS: [string, string][] = [
   ['Esc', 'Close the detail panel or this list'],
   ['/', 'Search events'],
   ['e', 'Toggle errors only'],
+  ['c', 'Show or hide the cost breakdown'],
   ['t', 'Focus the timeline'],
   ['?', 'Show these shortcuts'],
 ]
