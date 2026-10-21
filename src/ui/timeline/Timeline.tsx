@@ -81,8 +81,9 @@ export function Timeline({ run, groups, collapsed, selectedId, onSelect, onOpen,
     return <p className="muted timeline-empty">No events match the current filters.</p>
   }
 
-  const renderRow = (item: TimelineItem, extra: Pick<RowProps, 'stepLabel' | 'position' | 'setSize' | 'style'> = {}) => {
+  const renderRow = (item: TimelineItem, group: StepGroup, extra: Pick<RowProps, 'stepLabel' | 'position' | 'setSize' | 'style'> = {}) => {
     const folded = collapsed.includes(foldKey(item.id))
+    const context = group.context.has(item.id)
     return (
       <TimelineRow
         key={item.id}
@@ -93,7 +94,8 @@ export function Timeline({ run, groups, collapsed, selectedId, onSelect, onOpen,
         approval={approvalByRequestId.get(item.id)}
         folded={folded}
         onToggleFold={item.descendants ? () => onCollapse(foldKey(item.id), !folded) : undefined}
-        hit={terms.length ? firstHit(item, terms) : undefined}
+        hit={terms.length && !context ? firstHit(item, terms) : undefined}
+        context={context}
         onClick={() => {
           list.current?.focus()
           onOpen(item.id)
@@ -124,7 +126,7 @@ export function Timeline({ run, groups, collapsed, selectedId, onSelect, onOpen,
           selectedId={selectedId}
           header={(group, style) => <GroupHeader key={group.key} group={group} collapsed={collapsed} onCollapse={onCollapse} style={style} />}
           row={(item, group, position, style) =>
-            renderRow(item, { stepLabel: group.step !== undefined ? `Step ${group.step}` : 'Run', position, setSize: visibleCount, style })
+            renderRow(item, group, { stepLabel: group.step !== undefined ? `Step ${group.step}` : 'Run', position, setSize: visibleCount, style })
           }
         />
       ) : (
@@ -135,7 +137,7 @@ export function Timeline({ run, groups, collapsed, selectedId, onSelect, onOpen,
           return (
             <div key={group.key} role="group" aria-labelledby={headingId} aria-describedby={`${headingId}-meta`} className="step">
               <GroupHeader group={group} collapsed={collapsed} onCollapse={onCollapse} />
-              {!isCollapsed && group.items.map((item) => renderRow(item))}
+              {!isCollapsed && group.items.map((item) => renderRow(item, group))}
             </div>
           )
         })

@@ -9,11 +9,13 @@ interface Props {
   run: Run
   open: boolean
   onToggle: (open: boolean) => void
+  // Opens a sub-agent's agent.call event in the timeline.
+  onJump?: (eventId: string) => void
 }
 
 // Where the run's tokens and cost went: by model, and by agent when the run
 // handed work to sub-agents. Folded away until asked for.
-export function CostBreakdown({ run, open, onToggle }: Props) {
+export function CostBreakdown({ run, open, onToggle, onJump }: Props) {
   const models = useMemo(() => costByModel(run.items, run.pricing), [run])
   const agents = useMemo(() => costByAgent(run.items, run.pricing, run.agent?.name), [run])
   if (models.length === 0) return null
@@ -40,7 +42,7 @@ export function CostBreakdown({ run, open, onToggle }: Props) {
             <Head first="Agent" withTotal />
             <tbody>
               {agents.map((row) => (
-                <Row key={row.key} row={row} total={total} agent={row} />
+                <Row key={row.key} row={row} total={total} agent={row} onJump={onJump} />
               ))}
             </tbody>
           </table>
@@ -68,14 +70,22 @@ function Head({ first, withTotal }: { first: string; withTotal?: boolean }) {
   )
 }
 
-function Row({ row, total, agent }: { row: CostRow; total: number; agent?: AgentCostRow }) {
+function Row({ row, total, agent, onJump }: { row: CostRow; total: number; agent?: AgentCostRow; onJump?: (eventId: string) => void }) {
   const share = total > 0 ? row.costUsd / total : 0
   return (
     <tr>
       <th scope="row" className="breakdown__label" style={agent?.depth ? { paddingLeft: `${0.5 + agent.depth * 1.1}rem` } : undefined}>
         {agent?.depth ? <span aria-hidden="true">↳ </span> : null}
-        <span className={agent ? undefined : 'mono'}>{row.label}</span>
-        {agent?.eventId && <span className="muted mono"> {agent.eventId}</span>}
+        {agent?.eventId && onJump ? (
+          <button type="button" className="button button--link" onClick={() => onJump(agent.eventId!)} title="Show this sub-agent in the timeline">
+            {row.label} <span className="muted mono">{agent.eventId}</span>
+          </button>
+        ) : (
+          <>
+            <span className={agent ? undefined : 'mono'}>{row.label}</span>
+            {agent?.eventId && <span className="muted mono"> {agent.eventId}</span>}
+          </>
+        )}
       </th>
       <td>{row.modelCalls}</td>
       <td>

@@ -39,7 +39,7 @@ When an agent hands work to a sub-agent, log an `agent.call` and set `parent_id`
 
 ## Searching
 
-The search box looks inside every event: prompts, model output, tool inputs and outputs, errors and approvals. All words must appear, `"quoted phrases"` match as written, even across line breaks, and `field:value` narrows a term to one field: `model:`, `provider:`, `tool:`, `agent:`, `status:`, `type:`, `step:`, `id:`, `level:` or `action:`. For example `tool:grep "no matches"` or `agent:explorer status:error`. Each result shows where it matched, such as `output.text`, with the match highlighted, and when the file holds several runs, Trailview lists the other runs that also match so you can jump to them.
+The search box looks inside every event: prompts, model output, tool inputs and outputs, errors and approvals. All words must appear, `"quoted phrases"` match as written, even across line breaks, and `field:value` narrows a term to one field: `model:`, `provider:`, `tool:`, `agent:`, `status:`, `type:`, `step:`, `id:`, `level:` or `action:`. For example `tool:grep "no matches"` or `agent:explorer status:error`. Each result shows where it matched, such as `output.text`, with the match highlighted, and when the file holds several runs, Trailview lists the other runs that also match so you can jump to them. Enter and Shift+Enter in the search box, or `n` and `N` elsewhere, move between matches. When a match sits inside a sub-agent, the sub-agent rows above it stay in view, greyed out. The search is part of the link in the address bar, so a shared link opens with it.
 
 ## Cost breakdown
 

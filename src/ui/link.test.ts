@@ -5,7 +5,7 @@ import { ev } from '../test/helpers.ts'
 
 describe('links', () => {
   it('round-trips a target through the hash, escaping names', () => {
-    const target = { file: 'my run & co.jsonl', run: 'r1', event: 'e/2' }
+    const target = { file: 'my run & co.jsonl', run: 'r1', event: 'e/2', q: 'tool:grep "no matches"' }
     expect(parseLink(linkHash(target))).toEqual(target)
     expect(parseLink('#/?sample=a.jsonl')).toEqual({ sample: 'a.jsonl' })
   })
@@ -35,6 +35,12 @@ describe('opening a link', () => {
     const loaded = reducer({ ...initialState, filters: { hidden: ['log'], errorsOnly: true, text: 'q' } }, { type: 'loaded', name: 'x', text })
     const state = reducer(loaded, { type: 'linkOpened', target: { run: 'r2', event: 'b' } })
     expect(state).toMatchObject({ runIndex: 1, selectedId: 'b', detailOpen: true, filters: initialState.filters })
+  })
+
+  it('applies the search a link carries', () => {
+    const loaded = reducer({ ...initialState, filters: { hidden: ['log'], errorsOnly: true, text: 'old' } }, { type: 'loaded', name: 'x', text })
+    const state = reducer(loaded, { type: 'linkOpened', target: { run: 'r2', event: 'b', q: 'needle' } })
+    expect(state).toMatchObject({ runIndex: 1, selectedId: 'b', filters: { hidden: [], errorsOnly: false, text: 'needle' } })
   })
 
   it('says what is missing when the file lacks the run or the event', () => {

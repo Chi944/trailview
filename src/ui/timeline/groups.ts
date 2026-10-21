@@ -1,6 +1,6 @@
 import type { TimelineItem } from '../../core/derive/retries.ts'
 import { lastEvent } from '../../core/derive/retries.ts'
-import { itemHasError, matchesFilters, type Filters } from '../../core/filter.ts'
+import { itemHasError, matchesFilters, queryTerms, type Filters } from '../../core/filter.ts'
 
 export interface StepGroup {
   key: string
@@ -15,6 +15,9 @@ export interface StepGroup {
   errors: number
   // Items hidden because a sub-agent row above them is folded.
   folded: number
+  // Ids of items in `items` that do not match the search themselves but are
+  // shown, dimmed, because work nested under them does.
+  context: Set<string>
 }
 
 // Key in the collapsed list for a folded sub-agent row.
@@ -23,7 +26,10 @@ export const foldKey = (itemId: string) => `sub:${itemId}`
 // Groups consecutive items that share a step. Keys come from the unfiltered
 // list so a collapsed group stays collapsed while filters change. Items under
 // a folded sub-agent row (a `sub:<id>` key in `collapsed`) are left out.
+// While searching, a row whose nested work matches stays in as context.
 export function groupItems(items: TimelineItem[], filters: Filters, collapsed: string[] = []): StepGroup[] {
+  const matches = new Set(items.filter((i) => matchesFilters(i, filters)).map((i) => i.id))
+  const context = queryTerms(filters.text).length ? contextIds(items, matches, filters) : new Set<string>()
   const groups: StepGroup[] = []
   const seen = new Map<string, number>()
   let current: StepGroup | undefined
@@ -47,6 +53,7 @@ export function groupItems(items: TimelineItem[], filters: Filters, collapsed: s
         outputTokens: 0,
         errors: 0,
         folded: 0,
+        context: new Set(),
       }
       groups.push(current)
     }
@@ -64,11 +71,50 @@ export function groupItems(items: TimelineItem[], filters: Filters, collapsed: s
     if (item.parentItemId && (hidden.has(item.parentItemId) || folded.has(item.parentItemId))) {
       hidden.add(item.id)
       current.folded++
-    } else if (matchesFilters(item, filters)) {
+    } else if (matches.has(item.id)) {
       current.items.push(item)
+    } else if (context.has(item.id)) {
+      current.items.push(item)
+      current.context.add(item.id)
     }
   }
   return groups
+}
+
+// Ancestors of matching items that pass every filter but the search. Expects
+// nestItems output, where a parent comes before its children.
+function contextIds(items: TimelineItem[], matches: Set<string>, filters: Filters): Set<string> {
+  const byId = new Map(items.map((i) => [i.id, i]))
+  const withoutText = { ...filters, text: '' }
+  const out = new Set<string>()
+  for (const item of items) {
+    if (!matches.has(item.id)) continue
+    for (let p = item.parentItemId; p && !out.has(p); p = byId.get(p)?.parentItemId) {
+      const parent = byId.get(p)
+      if (parent && !matches.has(p) && matchesFilters(parent, withoutText)) out.add(p)
+    }
+  }
+  return out
+}
+
+// Ids of the rows that match the search, in timeline order, including rows
+// inside collapsed steps but not the dimmed context rows.
+export function hitIds(groups: StepGroup[]): string[] {
+  return groups.flatMap((g) => g.items.filter((i) => !g.context.has(i.id)).map((i) => i.id))
+}
+
+// The next (delta 1) or previous (delta -1) hit from the selection, wrapping
+// around. A selection that is not a hit starts from where it sits in `order`.
+export function stepHit(order: string[], hits: string[], selectedId: string | undefined, delta: 1 | -1): string | undefined {
+  if (hits.length === 0) return undefined
+  const hitSet = new Set(hits)
+  let index = selectedId === undefined ? -1 : order.indexOf(selectedId)
+  if (index < 0) index = delta > 0 ? -1 : order.length
+  for (let n = 0; n < order.length; n++) {
+    index = (index + delta + order.length) % order.length
+    if (hitSet.has(order[index]!)) return order[index]
+  }
+  return undefined
 }
 
 export function stepOf(item: TimelineItem): number | undefined {

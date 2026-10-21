@@ -26,13 +26,15 @@ export interface RowProps {
   onToggleFold?: () => void
   // Where the search matched, shown in place of the summary.
   hit?: SearchHit
+  // Shown only because work nested under it matches the search.
+  context?: boolean
 }
 
 export function rowDomId(id: string): string {
   return `row-${id}`
 }
 
-export function TimelineRow({ item, runStartMs, runWallMs, selected, approval, onClick, stepLabel, position, setSize, style, folded, onToggleFold, hit }: RowProps) {
+export function TimelineRow({ item, runStartMs, runWallMs, selected, approval, onClick, stepLabel, position, setSize, style, folded, onToggleFold, hit, context }: RowProps) {
   const first = item.events[0]!
   const final = item.events[item.events.length - 1]!
   const category = categoryOf(first)
@@ -51,11 +53,12 @@ export function TimelineRow({ item, runStartMs, runWallMs, selected, approval, o
       aria-selected={selected}
       aria-posinset={position}
       aria-setsize={setSize}
-      className={`row kind--${category}${selected ? ' row--selected' : ''}${isErrorEvent(final) ? ' row--error' : ''}`}
+      className={`row kind--${category}${selected ? ' row--selected' : ''}${isErrorEvent(final) ? ' row--error' : ''}${context ? ' row--context' : ''}`}
       style={style}
       onClick={onClick}
     >
       {stepLabel && <span className="visually-hidden">{stepLabel}: </span>}
+      {context && <span className="visually-hidden">Contains matches: </span>}
       <span className="row__offset">+{formatDuration(startMs - runStartMs)}</span>
       <span className={`row__kind kind--${category}`} aria-hidden="true" />
       <span className="row__text" style={item.depth ? ({ '--depth': item.depth } as CSSProperties) : undefined}>

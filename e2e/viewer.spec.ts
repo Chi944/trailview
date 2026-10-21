@@ -224,3 +224,37 @@ test('break the cost down by model and by sub-agent', async ({ page }) => {
   await page.keyboard.press('c')
   await expect(byAgent).toBeHidden()
 })
+
+test('step through search matches, share the search in a link, and jump to a sub-agent from the breakdown', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /Coding lead with sub-agents/ }).click()
+  const search = page.getByRole('searchbox', { name: 'Search events' })
+  await search.fill('toCsv')
+
+  // The explorer sub-agent row stays as context for the matches nested under it.
+  const timeline = page.getByRole('listbox', { name: 'Run timeline' })
+  await expect(timeline.getByRole('option', { name: /Contains matches: .*explorer/ })).toHaveClass(/row--context/)
+  const count = page.getByRole('search').locator('.filters__count')
+  await expect(count).toContainText(/\d+ matches$/)
+  const total = Number((await count.innerText()).match(/(\d+) matches$/)![1])
+  expect(total).toBeGreaterThan(1)
+
+  await search.press('Enter')
+  await expect(count).toContainText(`match 1 of ${total}`)
+  await search.press('Enter')
+  await expect(count).toContainText(`match 2 of ${total}`)
+  await search.press('Escape')
+  await page.keyboard.press('N')
+  await expect(count).toContainText(`match 1 of ${total}`)
+  await page.keyboard.press('N')
+  await expect(count).toContainText(`match ${total} of ${total}`)
+
+  await expect(page).toHaveURL(/q=toCsv/)
+  await page.reload()
+  await expect(search).toHaveValue('toCsv')
+
+  await page.keyboard.press('c')
+  await page.getByRole('table', { name: 'By agent' }).getByRole('button', { name: /code-search/ }).click()
+  await expect(page.getByRole('complementary')).toContainText('code-search')
+  await expect(page).toHaveURL(/event=e008/)
+})
