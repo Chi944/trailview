@@ -21,7 +21,7 @@ const DETAIL_MAX = 140
 // or a pull request. Only the filters apply: collapsed steps and folded
 // sub-agents are still exported, since folding is just for reading.
 export function runMarkdown({ run, fileName, filters = NO_FILTERS, link }: MarkdownInput): string {
-  const items = groupItems(run.items, filters).flatMap((g) => g.items)
+  const items = groupItems(run.items, filters).flatMap((g) => g.items.filter((i) => !g.context.has(i.id)))
   const t = run.totals
   const agent = run.agent ? `${run.agent.name}${run.agent.version ? ` ${run.agent.version}` : ''}` : undefined
   const lines = [

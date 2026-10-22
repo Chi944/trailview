@@ -499,6 +499,13 @@ h2 {
   background: var(--surface-2);
 }
 
+/* A row kept only because work nested under it matches the search */
+.row--context .row__label,
+.row--context .row__summary {
+  color: var(--muted);
+  font-style: italic;
+}
+
 .row--selected {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   border-left-color: var(--accent);

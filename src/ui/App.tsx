@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
 import { FilePicker } from './import/FilePicker.tsx'
 import { IssuesPanel } from './import/IssuesPanel.tsx'
 import { SampleMenu } from './import/SampleMenu.tsx'
@@ -10,7 +10,7 @@ import { FilterBar, SEARCH_INPUT_ID } from './run/FilterBar.tsx'
 import { Timeline } from './timeline/Timeline.tsx'
 import { descendantsOf } from '../core/derive/nesting.ts'
 import { matchesFilters, queryTerms } from '../core/filter.ts'
-import { groupItems } from './timeline/groups.ts'
+import { groupItems, hitIds, stepHit } from './timeline/groups.ts'
 import { ShortcutHelp } from './a11y/ShortcutHelp.tsx'
 import { DetailPanel } from './detail/DetailPanel.tsx'
 import { ComparePicker } from './compare/ComparePicker.tsx'
@@ -48,18 +48,18 @@ export function App() {
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
 
-  // The address bar always links to what is on screen: the file, the run and the open event.
+  // The address bar always links to what is on screen: the file, the run, the open event and the search.
   const linkedEvent = state.detailOpen ? state.selectedId : undefined
   useEffect(() => {
     if (state.target) return
     const file = state.file
     const hash = file
-      ? linkHash({ [file.sample ? 'sample' : 'file']: file.name, run: run?.id, event: linkedEvent })
+      ? linkHash({ [file.sample ? 'sample' : 'file']: file.name, run: run?.id, event: linkedEvent, q: state.filters.text.trim() })
       : ''
     if (hash !== location.hash) history.replaceState(null, '', hash || location.pathname + location.search)
-  }, [state.target, state.file, run, linkedEvent])
+  }, [state.target, state.file, run, linkedEvent, state.filters.text])
   const groups = useMemo(() => (run ? groupItems(run.items, state.filters, state.collapsed) : []), [run, state.filters, state.collapsed])
-  const shown = groups.reduce((n, g) => n + g.items.length, 0)
+  const shown = groups.reduce((n, g) => n + g.items.length - g.context.size, 0)
   // With a search in effect, the other runs in the file that have matches too.
   const otherMatches = useMemo(() => {
     const runs = state.file?.runs ?? []
@@ -68,6 +68,19 @@ export function App() {
       .map((r, index) => ({ index, id: r.id, count: r.items.filter((i) => matchesFilters(i, state.filters)).length }))
       .filter((m) => m.index !== state.runIndex && m.count > 0)
   }, [state.file, state.filters, state.runIndex])
+  // Search matches in order, and moving the selection between them. A match
+  // inside a collapsed step opens the step.
+  const searching = queryTerms(state.filters.text).length > 0
+  const hits = useMemo(() => (searching ? hitIds(groups) : []), [searching, groups])
+  const stepToHit = useCallback((delta: 1 | -1) => {
+    const order = groups.flatMap((g) => g.items.map((i) => i.id))
+    const id = stepHit(order, hits, state.selectedId, delta)
+    if (!id) return
+    const key = groups.find((g) => g.items.some((i) => i.id === id))?.key
+    if (key && state.collapsed.includes(key)) dispatch({ type: 'setCollapsed', key, collapsed: false })
+    dispatch({ type: 'select', id })
+    if (state.detailOpen) dispatch({ type: 'openDetail', id })
+  }, [groups, hits, state.selectedId, state.collapsed, state.detailOpen])
   const detailItem = state.detailOpen ? run?.items.find((i) => i.id === state.selectedId) : undefined
 
   const keys = useMemo(
@@ -77,6 +90,8 @@ export function App() {
       t: () => document.querySelector<HTMLElement>(TIMELINE_SELECTOR)?.focus(),
       e: () => dispatch({ type: 'setErrorsOnly', value: !state.filters.errorsOnly }),
       c: () => setBreakdownOpen((open) => !open),
+      n: () => stepToHit(1),
+      N: () => stepToHit(-1),
       Escape: () => {
         if (helpOpen) setHelpOpen(false)
         else if (state.comparing) dispatch({ type: 'stopCompare' })
@@ -84,7 +99,7 @@ export function App() {
         else if (document.activeElement?.id === SEARCH_INPUT_ID) document.querySelector<HTMLElement>(TIMELINE_SELECTOR)?.focus()
       },
     }),
-    [helpOpen, state.comparing, state.detailOpen, state.filters.errorsOnly],
+    [helpOpen, state.comparing, state.detailOpen, state.filters.errorsOnly, stepToHit],
   )
   useGlobalKeys(keys, state.file !== undefined)
 
@@ -150,7 +165,7 @@ export function App() {
       ) : run ? (
         <>
           <TotalsBar totals={run.totals} />
-          <CostBreakdown run={run} open={breakdownOpen} onToggle={setBreakdownOpen} />
+          <CostBreakdown run={run} open={breakdownOpen} onToggle={setBreakdownOpen} onJump={(id) => dispatch({ type: 'openDetail', id })} />
           <FilterBar
             run={run}
             filters={state.filters}
@@ -161,6 +176,8 @@ export function App() {
             onClear={() => dispatch({ type: 'clearFilters' })}
             otherMatches={otherMatches}
             onSelectRun={(index) => dispatch({ type: 'selectRun', index })}
+            hits={searching ? { index: hits.indexOf(state.selectedId ?? '') + 1, count: hits.length } : undefined}
+            onStepHit={stepToHit}
           >
             <ExportButtons
               fileName={`${run.id.replace(/[^\w.-]+/g, '_')}.md`}

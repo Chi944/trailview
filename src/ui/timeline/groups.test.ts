@@ -3,7 +3,8 @@ import sample from '../../test/schema-example.jsonl?raw'
 import { parseJsonl } from '../../core/parse/jsonl.ts'
 import { buildRuns } from '../../core/model/run.ts'
 import { NO_FILTERS } from '../../core/filter.ts'
-import { groupItems, moveSelection, visibleIds } from './groups.ts'
+import { groupItems, hitIds, moveSelection, stepHit, visibleIds } from './groups.ts'
+import { at, ev, runsFrom } from '../../test/helpers.ts'
 
 const run = buildRuns(parseJsonl(sample).events)[0]!
 const groups = groupItems(run.items, NO_FILTERS)
@@ -53,5 +54,55 @@ describe('moveSelection', () => {
   it('continues from a selection that was just collapsed away', () => {
     expect(moveSelection(groups, ['step-2'], 'e06', 1)).toBe('e08')
     expect(moveSelection(groups, ['step-2'], 'e06', -1)).toBe('e03')
+  })
+})
+
+describe('searching nested work', () => {
+  const [nested] = runsFrom([
+    ev({ type: 'agent.call', id: 'A', ts: at(1), step: 1, agent: { name: 'outer' }, duration_ms: 10, status: 'ok' }),
+    ev({ type: 'agent.call', id: 'B', ts: at(2), parent_id: 'A', agent: { name: 'inner' }, duration_ms: 5, status: 'ok' }),
+    ev({ type: 'log', id: 'L1', ts: at(3), parent_id: 'B', message: 'needle here' }),
+    ev({ type: 'log', id: 'L2', ts: at(4), step: 2, message: 'hay' }),
+    ev({ type: 'log', id: 'L3', ts: at(5), step: 3, message: 'another needle' }),
+  ])
+  const search = (text: string, extra: Partial<typeof NO_FILTERS> = {}) => groupItems(nested!.items, { ...NO_FILTERS, ...extra, text })
+
+  it('keeps the sub-agent rows above a match as context', () => {
+    const found = search('needle')
+    expect(found.flatMap((g) => g.items.map((i) => i.id))).toEqual(['A', 'B', 'L1', 'L3'])
+    expect([...found[0]!.context]).toEqual(['A', 'B'])
+    expect(hitIds(found)).toEqual(['L1', 'L3'])
+  })
+
+  it('adds no context rows without a search, or when their category is hidden', () => {
+    expect(groupItems(nested!.items, { ...NO_FILTERS, errorsOnly: true }).every((g) => g.context.size === 0)).toBe(true)
+    expect(search('needle', { hidden: ['agent'] }).flatMap((g) => g.items.map((i) => i.id))).toEqual(['L1', 'L3'])
+  })
+
+  it('does not mark an ancestor that matches itself', () => {
+    expect([...search('inner')[0]!.context]).toEqual(['A'])
+  })
+})
+
+describe('stepHit', () => {
+  const order = ['a', 'b', 'c', 'd', 'e']
+  const hits = ['b', 'd']
+
+  it('moves to the next or previous hit and wraps around', () => {
+    expect(stepHit(order, hits, undefined, 1)).toBe('b')
+    expect(stepHit(order, hits, undefined, -1)).toBe('d')
+    expect(stepHit(order, hits, 'b', 1)).toBe('d')
+    expect(stepHit(order, hits, 'd', 1)).toBe('b')
+    expect(stepHit(order, hits, 'b', -1)).toBe('d')
+  })
+
+  it('starts from a selection that is not a hit', () => {
+    expect(stepHit(order, hits, 'c', 1)).toBe('d')
+    expect(stepHit(order, hits, 'c', -1)).toBe('b')
+    expect(stepHit(order, hits, 'gone', 1)).toBe('b')
+  })
+
+  it('returns nothing without hits', () => {
+    expect(stepHit(order, [], 'a', 1)).toBeUndefined()
   })
 })

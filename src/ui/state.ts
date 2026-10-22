@@ -61,7 +61,8 @@ export type AppAction =
   | { type: 'changeCompare' }
 
 // Opens the run and event a link names in the loaded file, expanding and
-// unfiltering so the event is in view. Says so when the file lacks them.
+// unfiltering so the event is in view, then applies the link's search. Says
+// so when the file lacks them.
 export function applyTarget(state: AppState, target: LinkTarget): AppState {
   const file = state.file
   if (!file) return { ...state, target }
@@ -69,7 +70,7 @@ export function applyTarget(state: AppState, target: LinkTarget): AppState {
   const runIndex = target.run ? file.runs.findIndex((r) => r.id === target.run) : 0
   if (runIndex < 0) return { ...base, linkMiss: `The link points to run ${target.run}, which is not in ${file.name}.` }
   const run = file.runs[runIndex]!
-  const atRun = { ...base, runIndex, selectedId: undefined, detailOpen: false, collapsed: [], filters: NO_FILTERS }
+  const atRun = { ...base, runIndex, selectedId: undefined, detailOpen: false, collapsed: [], filters: { ...NO_FILTERS, text: target.q ?? '' } }
   if (!target.event) return atRun
   const item = run.items.find((i) => i.events.some((e) => e.event.id === target.event))
   if (!item) return { ...atRun, linkMiss: `The link points to event ${target.event}, which is not in run ${run.id}.` }

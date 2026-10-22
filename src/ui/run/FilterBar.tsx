@@ -13,13 +13,17 @@ interface Props {
   // Other runs in the file with events matching the search, to jump to.
   otherMatches?: { index: number; id: string; count: number }[]
   onSelectRun?: (index: number) => void
+  // While searching: which hit is selected (1-based, 0 for none) and how many
+  // there are, and a way to move to the next or previous one.
+  hits?: { index: number; count: number }
+  onStepHit?: (delta: 1 | -1) => void
   // Actions on the filtered view, shown at the end of the bar.
   children?: ReactNode
 }
 
 export const SEARCH_INPUT_ID = 'timeline-search'
 
-export function FilterBar({ run, filters, shown, onToggle, onErrorsOnly, onText, onClear, otherMatches = [], onSelectRun, children }: Props) {
+export function FilterBar({ run, filters, shown, onToggle, onErrorsOnly, onText, onClear, otherMatches = [], onSelectRun, hits, onStepHit, children }: Props) {
   const counts = new Map<Category, number>()
   for (const item of run.items) {
     const c = categoryOf(item.events[0]!)
@@ -56,12 +60,19 @@ export function FilterBar({ run, filters, shown, onToggle, onErrorsOnly, onText,
         title='Words and "quoted phrases" must all appear. Narrow a term to one field with model:, tool:, agent:, status:, type: or step:'
         value={filters.text}
         onChange={(e) => onText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && onStepHit) {
+            e.preventDefault()
+            onStepHit(e.shiftKey ? -1 : 1)
+          }
+        }}
       />
       <span id="search-hint" className="visually-hidden">
-        Words and quoted phrases must all appear. Narrow a term to one field with model:, tool:, agent:, status:, type: or step:.
+        Words and quoted phrases must all appear. Narrow a term to one field with model:, tool:, agent:, status:, type: or step:. Enter and Shift+Enter move to the next or previous match.
       </span>
       <span className="muted filters__count" aria-live="polite">
         {shown} of {run.items.length} shown
+        {hits && ` · ${hits.index ? `match ${hits.index} of ${hits.count}` : `${hits.count} match${hits.count === 1 ? '' : 'es'}`}`}
       </span>
       {otherMatches.length > 0 && onSelectRun && (
         <span className="filters__runs">

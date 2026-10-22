@@ -8,6 +8,7 @@ export const SHORTCUTS: [string, string][] = [
   ['← →', 'Fold or unfold the sub-agent on the current row, or else collapse or expand its step'],
   ['Esc', 'Close the detail panel or this list'],
   ['/', 'Search events'],
+  ['n / N or Enter / Shift+Enter in the search box', 'Next or previous search match'],
   ['e', 'Toggle errors only'],
   ['c', 'Show or hide the cost breakdown'],
   ['t', 'Focus the timeline'],
