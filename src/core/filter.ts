@@ -1,5 +1,6 @@
 import type { ParsedEvent } from './parse/jsonl.ts'
 import type { TimelineItem } from './derive/retries.ts'
+import { itemMatches, parseQuery, type SearchTerm } from './search.ts'
 
 export const CATEGORIES = ['model', 'tool', 'agent', 'approval', 'error', 'log', 'run', 'other'] as const
 export type Category = (typeof CATEGORIES)[number]
@@ -72,7 +73,15 @@ export function matchesFilters(item: TimelineItem, filters: Filters): boolean {
   const first = item.events[0]!
   if (filters.hidden.includes(categoryOf(first))) return false
   if (filters.errorsOnly && !itemHasError(item)) return false
-  const text = filters.text.trim().toLowerCase()
-  if (text && !item.events.some((e) => JSON.stringify(e.event).toLowerCase().includes(text))) return false
+  const terms = queryTerms(filters.text)
+  if (terms.length && !itemMatches(item, terms)) return false
   return true
+}
+
+// The last query parsed, since every item in a run is checked against the same text.
+let lastQuery: { text: string; terms: SearchTerm[] } = { text: '', terms: [] }
+
+export function queryTerms(text: string): SearchTerm[] {
+  if (text !== lastQuery.text) lastQuery = { text, terms: parseQuery(text) }
+  return lastQuery.terms
 }

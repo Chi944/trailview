@@ -5,6 +5,7 @@ import { isUnfinished } from '../../core/derive/starts.ts'
 import { describeEvent } from '../timeline/describe.ts'
 import { groupItems, itemSpan } from '../timeline/groups.ts'
 import { formatDuration, formatTokens, formatUsd } from '../format.ts'
+import { costByAgent, costByModel, type CostRow } from '../../core/derive/breakdown.ts'
 
 export interface MarkdownInput {
   run: Run
@@ -38,6 +39,10 @@ export function runMarkdown({ run, fileName, filters = NO_FILTERS, link }: Markd
       ...(t.approvals ? [`**Approvals** ${t.approvals} (${t.rejections} rejected, ${formatDuration(t.waitMs)} waiting)`] : []),
     ].join(' · '),
   ]
+  const models = costByModel(run.items, run.pricing)
+  if (models.length > 1) lines.push('', `**Cost by model** ${models.map((r) => costPart(r, t.costUsd)).join(' · ')}`)
+  const agents = costByAgent(run.items, run.pricing, run.agent?.name)
+  if (agents.length) lines.push('', `**Cost by agent** ${agents.map((r) => costPart({ ...r, label: `${'↳ '.repeat(r.depth)}${r.label}` }, t.costUsd)).join(' · ')}`)
   if (run.error) lines.push('', `> **${cell(run.error.type)}**: ${cell(run.error.message)}`)
 
   const filtered = describeFilters(filters)
@@ -81,6 +86,12 @@ function row(item: TimelineItem, run: Run): string {
     .join(' | ')
     .replace(/^/, '| ')
     .concat(' |')
+}
+
+// "label $0.0123 est. (3 calls, 40%)"
+function costPart(row: CostRow, total: number): string {
+  const share = total > 0 ? `, ${Math.round((row.costUsd / total) * 100)}%` : ''
+  return `${cell(row.label)} ${formatUsd(row.costUsd)}${row.estimated ? ' est.' : ''} (${row.modelCalls} call${row.modelCalls === 1 ? '' : 's'}${share})`
 }
 
 function describeFilters(filters: Filters): string {

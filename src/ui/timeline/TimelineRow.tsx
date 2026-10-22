@@ -6,6 +6,7 @@ import { isUnfinished } from '../../core/derive/starts.ts'
 import { formatDuration } from '../format.ts'
 import { describeEvent } from './describe.ts'
 import { itemSpan } from './groups.ts'
+import type { SearchHit } from '../../core/search.ts'
 
 export interface RowProps {
   item: TimelineItem
@@ -23,13 +24,15 @@ export interface RowProps {
   // Set on a row with events nested under it (a sub-agent's work).
   folded?: boolean
   onToggleFold?: () => void
+  // Where the search matched, shown in place of the summary.
+  hit?: SearchHit
 }
 
 export function rowDomId(id: string): string {
   return `row-${id}`
 }
 
-export function TimelineRow({ item, runStartMs, runWallMs, selected, approval, onClick, stepLabel, position, setSize, style, folded, onToggleFold }: RowProps) {
+export function TimelineRow({ item, runStartMs, runWallMs, selected, approval, onClick, stepLabel, position, setSize, style, folded, onToggleFold, hit }: RowProps) {
   const first = item.events[0]!
   const final = item.events[item.events.length - 1]!
   const category = categoryOf(first)
@@ -58,7 +61,15 @@ export function TimelineRow({ item, runStartMs, runWallMs, selected, approval, o
       <span className="row__text" style={item.depth ? ({ '--depth': item.depth } as CSSProperties) : undefined}>
         {item.depth ? <span className="row__nest" aria-hidden="true" /> : null}
         <span className="row__label">{label}</span>
-        {summary && <span className="row__summary">{summary}</span>}
+        {hit ? (
+          <span className="row__summary row__hit">
+            <span className="row__hit-path">{hit.path}:</span> {hit.before}
+            {hit.match && <mark>{hit.match}</mark>}
+            {hit.after}
+          </span>
+        ) : (
+          summary && <span className="row__summary">{summary}</span>
+        )}
       </span>
       <span className="row__badges">
         {onToggleFold && (

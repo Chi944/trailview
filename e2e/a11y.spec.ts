@@ -29,6 +29,13 @@ for (const scheme of ['light', 'dark'] as const) {
     await expect(page.getByRole('complementary')).toBeVisible()
     expect(await scan(page)).toEqual([])
 
+    await page.keyboard.press('Escape')
+    await page.keyboard.press('c')
+    await expect(page.getByRole('table', { name: 'By agent' })).toBeVisible()
+    await page.getByRole('searchbox', { name: 'Search events' }).fill('comma')
+    await expect(page.locator('mark').first()).toBeVisible()
+    expect(await scan(page)).toEqual([])
+
     await page.getByRole('button', { name: 'Close file' }).click()
     await page.getByRole('button', { name: /Two runs to compare/ }).click()
     await page.getByRole('button', { name: 'Compare' }).click()

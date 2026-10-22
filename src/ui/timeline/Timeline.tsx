@@ -5,6 +5,7 @@ import type { TimelineItem } from '../../core/derive/retries.ts'
 import { foldKey, groupKeyOf, moveSelection, type StepGroup } from './groups.ts'
 import { TimelineRow, rowDomId, type RowProps } from './TimelineRow.tsx'
 import { layoutEntries, scrollToReveal, visibleRange } from './window.ts'
+import { firstHit, type SearchTerm } from '../../core/search.ts'
 
 interface Props {
   run: Run
@@ -14,6 +15,8 @@ interface Props {
   onSelect: (id: string | undefined) => void
   onOpen: (id: string) => void
   onCollapse: (key: string, collapsed: boolean) => void
+  // The search terms in effect, so each row can show where it matched.
+  terms?: SearchTerm[]
 }
 
 const PAGE = 10
@@ -23,7 +26,7 @@ export const VIRTUAL_THRESHOLD = 400
 const DEFAULT_HEADER_PX = 30
 const DEFAULT_ROW_PX = 36
 
-export function Timeline({ run, groups, collapsed, selectedId, onSelect, onOpen, onCollapse }: Props) {
+export function Timeline({ run, groups, collapsed, selectedId, onSelect, onOpen, onCollapse, terms = [] }: Props) {
   const list = useRef<HTMLDivElement>(null)
   const approvalByRequestId = new Map(run.approvals.filter((a) => a.request).map((a) => [a.request!.id, a]))
   const visibleCount = groups.reduce((n, g) => n + g.items.length, 0)
@@ -90,6 +93,7 @@ export function Timeline({ run, groups, collapsed, selectedId, onSelect, onOpen,
         approval={approvalByRequestId.get(item.id)}
         folded={folded}
         onToggleFold={item.descendants ? () => onCollapse(foldKey(item.id), !folded) : undefined}
+        hit={terms.length ? firstHit(item, terms) : undefined}
         onClick={() => {
           list.current?.focus()
           onOpen(item.id)

@@ -4,7 +4,7 @@ Trailview is an open-source viewer for AI-agent runs. Load a run log and see it 
 
 It runs entirely in your browser, locally or as a static site. There is no account, no server and no API key, and your logs never leave your machine.
 
-![Loading a sample run, opening a step with the keyboard, then filtering to approvals](docs/media/demo.gif)
+![Opening a run with sub-agents, stepping into one with the keyboard, showing the cost breakdown, searching every event for "comma", then comparing two versions of an agent](docs/media/demo.gif)
 
 **Live demo:** [chi944.github.io/trailview](https://chi944.github.io/trailview/). In the demo you pick a sample run or drop your own log file; it is read in the tab and never uploaded.
 
@@ -19,7 +19,7 @@ npm install
 npm run dev
 ```
 
-Then open http://localhost:5173 and load a file. Press `?` for keyboard shortcuts: `j`/`k` move, `Enter` opens a step, `e` toggles errors only, `/` searches.
+Then open http://localhost:5173 and load a file. Press `?` for keyboard shortcuts: `j`/`k` move, `Enter` opens a step, `e` toggles errors only, `/` searches, `c` shows the cost breakdown.
 
 ## Log format
 
@@ -36,6 +36,14 @@ If your agent can crash or be killed, also write a `model.start` or `tool.start`
 ## Sub-agents
 
 When an agent hands work to a sub-agent, log an `agent.call` and set `parent_id` on the sub-agent's events. Trailview lists that work under the call that started it, indented and foldable, with its own token and cost totals; sub-agents can nest inside sub-agents. OpenTelemetry traces with nested `invoke_agent` spans show the same way. The sample "Coding lead with sub-agents" shows two levels.
+
+## Searching
+
+The search box looks inside every event: prompts, model output, tool inputs and outputs, errors and approvals. All words must appear, `"quoted phrases"` match as written, even across line breaks, and `field:value` narrows a term to one field: `model:`, `provider:`, `tool:`, `agent:`, `status:`, `type:`, `step:`, `id:`, `level:` or `action:`. For example `tool:grep "no matches"` or `agent:explorer status:error`. Each result shows where it matched, such as `output.text`, with the match highlighted, and when the file holds several runs, Trailview lists the other runs that also match so you can jump to them.
+
+## Cost breakdown
+
+Press **Cost breakdown** under the totals, or `c`, to see where the tokens and money went: per model, and when the run used sub-agents, per agent. An agent's own cost leaves out the sub-agents it called and a last column adds them back, so the own costs add up to the run total. Every attempt of a retried call counts. Markdown exports include the same breakdown.
 
 ## Comparing runs
 
@@ -59,6 +67,7 @@ The address bar always points at what you are looking at: the file, the run and 
 | `npm run typecheck` | Type-check with TypeScript |
 | `npm run lint` | Lint with ESLint |
 | `npm run build` | Build the static site into `dist/` |
+| `node scripts/record-demo.mjs` | Re-record the README GIF against `npm run preview -- --port 4173` (needs ffmpeg) |
 
 ## Licence
 

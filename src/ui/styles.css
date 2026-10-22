@@ -321,6 +321,111 @@ h2 {
   min-width: 14rem;
 }
 
+/* Search results: where an event matched, and other runs with matches */
+.row__hit-path {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.8em;
+}
+
+.row__hit mark {
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  color: var(--text);
+  border-radius: 2px;
+}
+
+.filters__runs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+/* Cost breakdown */
+.breakdown {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.75rem;
+}
+
+.breakdown summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.breakdown summary .muted {
+  font-weight: normal;
+}
+
+.breakdown__tables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+  overflow-x: auto;
+}
+
+.breakdown__table {
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdown__table caption {
+  text-align: left;
+  font-size: 0.75rem;
+  color: var(--muted);
+  padding-bottom: 0.25rem;
+}
+
+.breakdown__table th,
+.breakdown__table td {
+  text-align: right;
+  padding: 0.2rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.breakdown__table thead th {
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.breakdown__table th:first-child,
+.breakdown__label {
+  text-align: left;
+  font-weight: normal;
+}
+
+.breakdown__share {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.breakdown__bar {
+  display: inline-block;
+  width: 4rem;
+  height: 0.5rem;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.breakdown__bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.breakdown__note {
+  font-size: 0.75rem;
+  margin: 0.4rem 0 0;
+}
+
 /* Timeline */
 .timeline {
   background: var(--surface);
