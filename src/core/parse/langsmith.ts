@@ -58,9 +58,10 @@ export function parseLangSmith(text: string): ParseResult {
   }
 
   const byId = new Map(runs.map((r) => [r.id, r]))
+  const roots = new Map<Run, Run>()
   const byTrace = new Map<string, Run[]>()
   for (const run of runs) {
-    const root = rootOf(run, byId)
+    const root = rootOf(run, byId, roots)
     const key = run.traceId ?? root.traceId ?? root.id
     const list = byTrace.get(key) ?? []
     list.push(run)
@@ -72,14 +73,19 @@ export function parseLangSmith(text: string): ParseResult {
   return validateEvents(records, issues)
 }
 
-function rootOf(run: Run, byId: Map<string, Run>): Run {
+// Roots found so far are kept in `roots`, so a long chain is walked once, not once per run.
+function rootOf(run: Run, byId: Map<string, Run>, roots: Map<Run, Run>): Run {
   let current = run
+  const path: Run[] = []
   const seen = new Set<string>()
-  while (current.parentId && byId.has(current.parentId) && !seen.has(current.id)) {
+  while (!roots.has(current) && current.parentId && byId.has(current.parentId) && !seen.has(current.id)) {
     seen.add(current.id)
+    path.push(current)
     current = byId.get(current.parentId)!
   }
-  return current
+  const root = roots.get(current) ?? current
+  for (const r of [...path, current]) roots.set(r, root)
+  return root
 }
 
 function readRuns(text: string, issues: ParseIssue[]): Run[] {
@@ -98,27 +104,33 @@ function readRuns(text: string, issues: ParseIssue[]): Run[] {
     })
   }
 
+  // Depth-first with an explicit stack, so deeply nested child_runs cannot
+  // overflow the call stack. Runs come out in the order they are written.
   const runs: Run[] = []
-  const visit = (value: unknown, line: number, parentId?: string) => {
+  const stack: { value: unknown; line: number; parentId?: string }[] = docs.map((d) => ({ ...d })).reverse()
+  const pushAll = (values: unknown[], line: number, parentId?: string) => {
+    for (let i = values.length - 1; i >= 0; i--) stack.push({ value: values[i], line, parentId })
+  }
+  while (stack.length > 0) {
+    const { value, line, parentId } = stack.pop()!
     if (Array.isArray(value)) {
-      for (const item of value) visit(item, line, parentId)
-      return
+      pushAll(value, line, parentId)
+      continue
     }
     if (!isObject(value)) {
       issues.push({ line, severity: 'error', message: 'Expected a LangSmith run object' })
-      return
+      continue
     }
     if (Array.isArray(value.runs) && value.run_type === undefined) {
-      visit(value.runs, line)
-      return
+      pushAll(value.runs, line)
+      continue
     }
     const raw = value as RawRun
     const run = toRun(raw, line, parentId)
     if (run) runs.push(run)
     else issues.push({ line, severity: 'error', message: `Run "${str(raw.name) ?? '?'}" is missing id, run_type or start_time` })
-    if (Array.isArray(raw.child_runs)) visit(raw.child_runs, line, run?.id)
+    if (Array.isArray(raw.child_runs)) pushAll(raw.child_runs, line, run?.id)
   }
-  for (const { line, value } of docs) visit(value, line)
   return runs
 }
 
@@ -148,7 +160,8 @@ function toRun(raw: RawRun, line: number, parentId?: string): Run | undefined {
 function traceToEvents(traceId: string, runs: Run[]): EventRecord[] {
   runs.sort((a, b) => a.startMs - b.startMs || b.endMs - a.endMs || order(a).localeCompare(order(b)))
   const ids = new Set(runs.map((r) => r.id))
-  const root = runs.find((r) => !r.parentId || !ids.has(r.parentId))!
+  // When every run names a parent in the trace (a cycle), the earliest run stands in as the root.
+  const root = runs.find((r) => !r.parentId || !ids.has(r.parentId)) ?? runs[0]!
   const out: EventRecord[] = []
   const add = (line: number, value: Record<string, unknown>) => out.push({ line, value: { run_id: traceId, ...value } })
   // A call still running at export is written as a start line, which the
@@ -502,7 +515,8 @@ function errorInfo(text: string): { type: string; message: string } {
 
 // LangSmith writes UTC times without an offset; treat those as UTC.
 function timeMs(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value
+  // Numbers outside the range a Date can hold could not be shown as a time.
+  if (typeof value === 'number') return Math.abs(value) <= MAX_DATE_MS ? value : undefined
   if (typeof value !== 'string' || value === '') return undefined
   const withZone = /(?:Z|[+-]\d\d:?\d\d)$/i.test(value) ? value : `${value}Z`
   const ms = Date.parse(withZone)
@@ -524,6 +538,7 @@ function costOf(value: unknown): number | undefined {
   return typeof n === 'number' && Number.isFinite(n) && n >= 0 ? n : undefined
 }
 
+const MAX_DATE_MS = 8.64e15
 const order = (run: Run) => str(run.raw.dotted_order) ?? ''
 const iso = (ms: number) => new Date(ms).toISOString()
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)

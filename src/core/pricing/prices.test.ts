@@ -19,6 +19,11 @@ describe('findPrice', () => {
   it('returns undefined for unknown models', () => {
     expect(findPrice('nope', {}, table)).toBeUndefined()
   })
+
+  // Found by the parser fuzz tests: these names used to return Object.prototype members and a NaN cost.
+  it.each(['constructor', '__proto__', 'toString', 'hasOwnProperty'])('does not treat %s as a priced model', (model) => {
+    expect(findPrice(model, {}, table)).toBeUndefined()
+  })
 })
 
 describe('estimateCost', () => {
