@@ -19,7 +19,7 @@ npm install
 npm run dev
 ```
 
-Then open http://localhost:5173 and load a file. Press `?` for keyboard shortcuts: `j`/`k` move, `Enter` opens a step, `e` toggles errors only, `/` searches, `c` shows the cost breakdown.
+Then open http://localhost:5173 and load a file. Press `?` for keyboard shortcuts: `j`/`k` move, `Enter` opens a step, `e` toggles errors only, `/` searches, `c` shows the cost breakdown, `u` the approvals audit trail, and `a` jumps to the approvals lane.
 
 ## Log format
 
@@ -44,6 +44,10 @@ The search box looks inside every event: prompts, model output, tool inputs and 
 ## Cost breakdown
 
 Press **Cost breakdown** under the totals, or `c`, to see where the tokens and money went: per model, and when the run used sub-agents, per agent. An agent's own cost leaves out the sub-agents it called and a last column adds them back, so the own costs add up to the run total. Every attempt of a retried call counts. Markdown exports include the same breakdown.
+
+## Approvals and audit trail
+
+When a run paused for a person, a lane above the timeline shows each approval as a bar from the request to the decision: green for approved, red for rejected, amber for still pending, striped when something needs a look. Click a bar, or press `a` and move with the arrow keys, to open that approval. Press **Audit trail**, or `u`, for a table of every approval: when it was asked, the step, the action and policy, who decided (a person or a policy), the reason, how long it waited and what ran afterwards. It flags a tool that ran after a rejection, a decision with no request, and a request that was never answered. Markdown exports include the audit trail for the whole run, whatever the filters.
 
 ## Comparing runs
 

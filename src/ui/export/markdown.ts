@@ -6,6 +6,7 @@ import { describeEvent } from '../timeline/describe.ts'
 import { groupItems, itemSpan } from '../timeline/groups.ts'
 import { formatDuration, formatTokens, formatUsd } from '../format.ts'
 import { costByAgent, costByModel, type CostRow } from '../../core/derive/breakdown.ts'
+import { AUDIT_FLAG_LABELS, auditTrail, decidedBy } from '../../core/derive/audit.ts'
 
 export interface MarkdownInput {
   run: Run
@@ -44,6 +45,7 @@ export function runMarkdown({ run, fileName, filters = NO_FILTERS, link }: Markd
   const agents = costByAgent(run.items, run.pricing, run.agent?.name)
   if (agents.length) lines.push('', `**Cost by agent** ${agents.map((r) => costPart({ ...r, label: `${'↳ '.repeat(r.depth)}${r.label}` }, t.costUsd)).join(' · ')}`)
   if (run.error) lines.push('', `> **${cell(run.error.type)}**: ${cell(run.error.message)}`)
+  lines.push(...auditLines(run))
 
   const filtered = describeFilters(filters)
   lines.push('', filtered ? `${items.length} of ${run.items.length} events (${filtered}):` : `${run.items.length} events:`, '')
@@ -86,6 +88,23 @@ function row(item: TimelineItem, run: Run): string {
     .join(' | ')
     .replace(/^/, '| ')
     .concat(' |')
+}
+
+// The audit trail covers the whole run whatever the filters, like the totals.
+function auditLines(run: Run): string[] {
+  const entries = auditTrail(run.approvals, run.endMs)
+  if (entries.length === 0) return []
+  const lines = ['', '**Approval audit trail**', '', '| Asked | Step | Action | Policy | Decision | Reason | Waited | Then ran | Check |', '| --- | --- | --- | --- | --- | --- | --- | --- | --- |']
+  for (const { approval, eventId, step, startMs, flags } of entries) {
+    const { request, decision, toolCall } = approval
+    const action = request ? `\`${cell(request.action)}\` ${cell(truncate(request.summary))}` : `\`${cell(toolCall?.tool ?? approval.approvalId)}\``
+    lines.push(
+      `| +${formatDuration(startMs - run.startMs)} \`${eventId}\` | ${step ?? ''} | ${action} | ${cell(request?.policy ?? '')} | ${cell(decidedBy(approval))} | ${cell(truncate(decision?.reason ?? ''))} | ${
+        approval.waitMs !== undefined ? formatDuration(approval.waitMs) : ''
+      } | ${toolCall ? `${cell(toolCall.tool)} (${toolCall.status})` : approval.outcome === 'rejected' ? 'nothing' : ''} | ${flags.map((f) => `**${AUDIT_FLAG_LABELS[f]}**`).join(', ')} |`,
+    )
+  }
+  return lines
 }
 
 // "label $0.0123 est. (3 calls, 40%)"
