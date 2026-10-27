@@ -23,19 +23,20 @@ Then open http://localhost:5173 and load a file. Press `?` for keyboard shortcut
 
 ## Log format
 
-Trailview reads three formats and detects which one a file is from its content:
+Trailview reads four formats and detects which one a file is from its content:
 
 - its own JSONL format, one JSON event per line;
 - OpenTelemetry traces exported as OTLP JSON that follow the GenAI semantic conventions;
-- LangSmith run exports from LangChain and LangGraph agents, as returned by the LangSmith SDK's `list_runs`.
+- LangSmith run exports from LangChain and LangGraph agents, as returned by the LangSmith SDK's `list_runs`;
+- OpenAI Agents SDK traces, the objects its `trace.export()` and `span.export()` return, written by the 15-line processor in [docs/schema.md](docs/schema.md#openai-agents-sdk-import).
 
-See [docs/schema.md](docs/schema.md) for the format and both mappings, and [samples/](samples/) for example runs.
+See [docs/schema.md](docs/schema.md) for the format and all three mappings, and [samples/](samples/) for example runs.
 
 If your agent can crash or be killed, also write a `model.start` or `tool.start` line when each call begins. A call that never finishes then shows as **unfinished**, so you can see what the run was waiting on when it stopped. The sample "Data backfill agent" shows one.
 
 ## Sub-agents
 
-When an agent hands work to a sub-agent, log an `agent.call` and set `parent_id` on the sub-agent's events. Trailview lists that work under the call that started it, indented and foldable, with its own token and cost totals; sub-agents can nest inside sub-agents. OpenTelemetry traces with nested `invoke_agent` spans show the same way. The sample "Coding lead with sub-agents" shows two levels.
+When an agent hands work to a sub-agent, log an `agent.call` and set `parent_id` on the sub-agent's events. Trailview lists that work under the call that started it, indented and foldable, with its own token and cost totals; sub-agents can nest inside sub-agents. OpenTelemetry traces with nested `invoke_agent` spans, and Agents SDK handoffs and agents-as-tools, show the same way. The sample "Coding lead with sub-agents" shows two levels.
 
 ## Searching
 

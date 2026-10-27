@@ -48,4 +48,9 @@ export const SAMPLES: Sample[] = [
     title: 'LangSmith export: a LangGraph SQL agent fixes a bad query and posts to Slack after approval',
     load: () => text(import('../../../samples/langsmith-sql-analyst.json?raw')),
   },
+  {
+    file: 'openai-agents-support-triage.json',
+    title: 'OpenAI Agents SDK trace: triage hands a damaged-order refund to another agent, which waits for approval',
+    load: () => text(import('../../../samples/openai-agents-support-triage.json?raw')),
+  },
 ]

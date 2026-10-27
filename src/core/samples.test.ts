@@ -22,6 +22,6 @@ describe('bundled samples', async () => {
     expect(runs.flatMap((r) => r.approvals.map((a) => a.decision?.by.kind))).toEqual(expect.arrayContaining(['human', 'policy']))
     expect(runs.some((r) => r.events.some((e) => e.kind === 'unknown'))).toBe(true)
     expect(runs.filter((r) => r.events.some(isUnfinished)).map((r) => r.id)).toEqual(['run_backfill_5512'])
-    expect(runs.filter((r) => r.items.some((i) => (i.depth ?? 0) >= 2)).map((r) => r.id)).toEqual(['run_lead_8d41'])
+    expect(runs.filter((r) => r.items.some((i) => (i.depth ?? 0) >= 2)).map((r) => r.id)).toEqual(['run_lead_8d41', 'trace_8c41d0f6b2e94a1d'])
   })
 })

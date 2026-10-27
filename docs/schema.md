@@ -209,6 +209,70 @@ See [`samples/langsmith-sql-analyst.json`](../samples/langsmith-sql-analyst.json
 
 ---
 
+## OpenAI Agents SDK import
+
+The Agents SDK has no export file of its own, so Trailview reads the objects its tracing API returns: `trace.export()` and `span.export()`, as one JSON object per line, as a JSON array, or as a `{ "data": [...] }` page from the traces API. A span written once when it starts and again when it ends is read as one call, keeping the finished copy.
+
+A `TracingProcessor` writes the file. The SDK leaves the model, usage and output off a `response` span (it keeps only the response id), so the processor copies them on; without that you still get every call and its timing, but no tokens or cost.
+
+```python
+import json
+from agents import add_trace_processor
+from agents.tracing.processor_interface import TracingProcessor
+
+class TrailviewProcessor(TracingProcessor):
+    def __init__(self, path="trace.jsonl"):
+        self.out = open(path, "a")
+
+    def write(self, item):
+        self.out.write(json.dumps(item.export()) + "\n")
+        self.out.flush()
+
+    def on_trace_start(self, trace): self.write(trace)
+    def on_trace_end(self, trace): self.write(trace)
+    def on_span_start(self, span): self.write(span)       # so a crash still shows the call
+
+    def on_span_end(self, span):
+        data = getattr(span.span_data, "response", None)  # the Responses API result
+        if data is not None:
+            span.span_data.model = data.model
+            span.span_data.usage = data.usage.model_dump() if data.usage else None
+            span.span_data.output = [item.model_dump() for item in data.output]
+        self.write(span)
+
+    def shutdown(self): self.out.close()
+    def force_flush(self): self.out.flush()
+
+add_trace_processor(TrailviewProcessor())
+```
+
+| Agents SDK | Trailview |
+|---|---|
+| a trace | one run; its `trace_id` is the `run_id` |
+| `workflow_name`, `group_id`, `metadata` | the agent name (unless it is the SDK's default `Agent workflow`, when the first agent's name is used), and `attrs` |
+| the first top-level `agent` span | `run.start` and `run.end`; the run's input is the first user message sent to a model, its output the last text the finishing agent produced |
+| every later `agent` span (a handoff target, or an agent run as a tool) | `agent.call`, with the work inside it nested under it; one started inside a `function` span hangs off that `tool.call` and takes its input |
+| `response` and `generation` spans | `model.call` (model, `input`, usage, text and tool calls from `output`; Responses API output items or Chat Completions messages) |
+| `function` spans | `tool.call` (tool from `name`, `input` and `output` parsed when they are JSON strings, MCP details kept in `attrs.mcp`) |
+| `handoff` spans | a `log` row, "Handoff: triage → refund" |
+| `guardrail` spans | a `log` row when it passed, an `error` row of type `guardrail_tripwire` when `triggered` is true |
+| `mcp_tools` spans | a `log` row naming the server and how many tools it listed |
+| any other span type (`transcription`, `speech`) | a generic row of type `openai.<type>` with the span's data |
+| `error: { message, data }` | `status: "error"`, `error.type` from `data.type` (else the span kind), `error.message` from `data.error`, else `message` |
+| `usage.input_tokens_details.cached_tokens` | `cache_read_tokens` |
+
+OpenAI counts cached tokens inside `input_tokens`, so `usage.input_tokens` is that count minus the cached one, as with OpenTelemetry and LangSmith. The SDK logs no cost, so every figure is estimated from the viewer's price table and marked "est.". `provider` is read from a routed model id (`anthropic/claude-sonnet-5-5`), else guessed from the model name, else `openai`.
+
+Each agent counts its own steps, retries and pending tool calls, so a handoff target starts again at step 1. A model call straight after a failed call to the same model is its retry; a `function` span straight after a failed span for the same tool is its retry, and inherits its call id. A tool is matched to the first unanswered tool call of the same name from the model call before it.
+
+A span with no `ended_at` becomes a `model.start` or `tool.start` line and shows as unfinished; a top-level agent still running means the run has no `run.end` and shows as incomplete.
+
+Approvals have no span of their own. Trailview reads `custom` spans named `trailview.approval.request` and `trailview.approval.decision`, whose `data` uses Trailview's own field names: `approval_id` (required), `action`, `summary`, `call_id` and `policy` on the request, and `decision`, `by: { kind, name }` and `reason` on the decision. The approved tool's next call picks up the `approval_id`. An approval gate can write them with `custom_span(name="trailview.approval.request", data={...})`.
+
+See [`samples/openai-agents-support-triage.json`](../samples/openai-agents-support-triage.json) for a complete trace.
+
+---
+
 ## Example run (13 events)
 
 This is a condensed version of the run bundled as [`samples/oncall-digest.jsonl`](../samples/oncall-digest.jsonl), and is kept verbatim in [`src/test/schema-example.jsonl`](../src/test/schema-example.jsonl), where the unit tests check it against the table below; the bundled file adds a log lookup, an on-call schedule lookup, full prompts and outputs, and costs at current list prices. An on-call digest agent looks up yesterday's failed jobs (the first lookup times out and is retried), drafts an email to the whole engineering list, gets **rejected**, re-targets the on-call engineer, gets **approved**, sends, and finishes. Prices are illustrative.
