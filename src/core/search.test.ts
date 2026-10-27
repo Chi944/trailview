@@ -38,6 +38,12 @@ describe('itemMatches', () => {
     expect(ids('"it.   the"')).toEqual(['m1'])
   })
 
+  it('does not match a phrase that spans two separate values', () => {
+    // m1 has "anthropic" then "claude-haiku-5-5" as neighbouring values.
+    expect(ids('"anthropic claude"')).toEqual([])
+    expect(ids('anthropicclaude')).toEqual([])
+  })
+
   it('does not match field names', () => {
     expect(ids('usage')).toEqual([])
     expect(ids('duration_ms')).toEqual([])

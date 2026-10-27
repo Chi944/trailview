@@ -58,16 +58,12 @@ export function groupItems(items: TimelineItem[], filters: Filters, collapsed: s
       groups.push(current)
     }
     current.total++
-    const { startMs, endMs } = itemSpan(item)
-    current.startMs = Math.min(current.startMs, startMs)
-    current.endMs = Math.max(current.endMs, endMs)
-    for (const e of item.events) {
-      if (e.kind === 'known' && e.event.type === 'model.call' && e.event.usage) {
-        current.inputTokens += e.event.usage.input_tokens
-        current.outputTokens += e.event.usage.output_tokens
-      }
-    }
-    if (itemHasError(item)) current.errors++
+    const stats = statsOf(item)
+    current.startMs = Math.min(current.startMs, stats.startMs)
+    current.endMs = Math.max(current.endMs, stats.endMs)
+    current.inputTokens += stats.inputTokens
+    current.outputTokens += stats.outputTokens
+    if (stats.error) current.errors++
     if (item.parentItemId && (hidden.has(item.parentItemId) || folded.has(item.parentItemId))) {
       hidden.add(item.id)
       current.folded++
@@ -81,10 +77,43 @@ export function groupItems(items: TimelineItem[], filters: Filters, collapsed: s
   return groups
 }
 
+// What a row adds to its step's header. It does not depend on the filters, so
+// it is worked out once per item rather than on every keystroke in the search box.
+interface ItemStats {
+  startMs: number
+  endMs: number
+  inputTokens: number
+  outputTokens: number
+  error: boolean
+}
+
+const statsCache = new WeakMap<TimelineItem, ItemStats>()
+
+function statsOf(item: TimelineItem): ItemStats {
+  let stats = statsCache.get(item)
+  if (!stats) {
+    stats = { ...itemSpan(item), inputTokens: 0, outputTokens: 0, error: itemHasError(item) }
+    for (const e of item.events) {
+      if (e.kind === 'known' && e.event.type === 'model.call' && e.event.usage) {
+        stats.inputTokens += e.event.usage.input_tokens
+        stats.outputTokens += e.event.usage.output_tokens
+      }
+    }
+    statsCache.set(item, stats)
+  }
+  return stats
+}
+
+const byIdCache = new WeakMap<TimelineItem[], Map<string, TimelineItem>>()
+
 // Ancestors of matching items that pass every filter but the search. Expects
 // nestItems output, where a parent comes before its children.
 function contextIds(items: TimelineItem[], matches: Set<string>, filters: Filters): Set<string> {
-  const byId = new Map(items.map((i) => [i.id, i]))
+  let byId = byIdCache.get(items)
+  if (!byId) {
+    byId = new Map(items.map((i) => [i.id, i]))
+    byIdCache.set(items, byId)
+  }
   const withoutText = { ...filters, text: '' }
   const out = new Set<string>()
   for (const item of items) {

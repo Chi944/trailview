@@ -39,16 +39,20 @@ interface Leaf {
   lower: string
 }
 
-const leafCache = new WeakMap<object, Leaf[]>()
+// Each event's leaves, plus all their text in one string so a plain term can
+// rule an event out with one includes() instead of one per value.
+const leafCache = new WeakMap<object, { leaves: Leaf[]; all: string }>()
 
-function leavesOf(event: object): Leaf[] {
-  let leaves = leafCache.get(event)
-  if (!leaves) {
-    leaves = []
+function indexOf(event: object): { leaves: Leaf[]; all: string } {
+  let index = leafCache.get(event)
+  if (!index) {
+    const leaves: Leaf[] = []
     collect(event, '', leaves)
-    leafCache.set(event, leaves)
+    // A separator no query can contain, so a term never matches across two values.
+    index = { leaves, all: leaves.map((l) => l.lower).join('\u0000') }
+    leafCache.set(event, index)
   }
-  return leaves
+  return index
 }
 
 function collect(value: unknown, path: string, out: Leaf[]): void {
@@ -67,8 +71,8 @@ function inField(leaf: Leaf, field: string): boolean {
 }
 
 function termHit(event: ParsedEvent['event'], term: SearchTerm): Leaf | undefined {
-  const leaves = leavesOf(event)
-  if (!term.field) return leaves.find((l) => l.lower.includes(term.text))
+  const { leaves, all } = indexOf(event)
+  if (!term.field) return all.includes(term.text) ? leaves.find((l) => l.lower.includes(term.text)) : undefined
   const value = (event as Record<string, unknown>)[term.field]
   // Numbers such as step are compared whole, so step:3 does not match step 13.
   if (typeof value === 'number') return String(value) === term.text ? leaves.find((l) => l.path === term.field) : undefined

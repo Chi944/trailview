@@ -20,8 +20,11 @@ import { initialState, reducer, type AppState } from './state.ts'
 import { ExportButtons } from './export/ExportButtons.tsx'
 import { runMarkdown } from './export/markdown.ts'
 import { linkHash, parseLink, type LinkTarget } from './link.ts'
+import { useSettled } from './useSettled.ts'
 
 const TIMELINE_SELECTOR = '.timeline'
+const LARGE_RUN_ITEMS = 20_000
+const SETTLE_MS = 250
 
 export function App() {
   // A link's target is read before the first render, so the hash is not cleared before it is used.
@@ -58,19 +61,22 @@ export function App() {
       : ''
     if (hash !== location.hash) history.replaceState(null, '', hash || location.pathname + location.search)
   }, [state.target, state.file, run, linkedEvent, state.filters.text])
-  const groups = useMemo(() => (run ? groupItems(run.items, state.filters, state.collapsed) : []), [run, state.filters, state.collapsed])
+  // On a very large run, filtering takes long enough to swallow key presses,
+  // so the timeline waits until typing pauses.
+  const filters = useSettled(state.filters, (run?.items.length ?? 0) > LARGE_RUN_ITEMS ? SETTLE_MS : 0)
+  const groups = useMemo(() => (run ? groupItems(run.items, filters, state.collapsed) : []), [run, filters, state.collapsed])
   const shown = groups.reduce((n, g) => n + g.items.length - g.context.size, 0)
   // With a search in effect, the other runs in the file that have matches too.
   const otherMatches = useMemo(() => {
     const runs = state.file?.runs ?? []
-    if (runs.length < 2 || queryTerms(state.filters.text).length === 0) return []
+    if (runs.length < 2 || queryTerms(filters.text).length === 0) return []
     return runs
-      .map((r, index) => ({ index, id: r.id, count: r.items.filter((i) => matchesFilters(i, state.filters)).length }))
+      .map((r, index) => ({ index, id: r.id, count: r.items.filter((i) => matchesFilters(i, filters)).length }))
       .filter((m) => m.index !== state.runIndex && m.count > 0)
-  }, [state.file, state.filters, state.runIndex])
+  }, [state.file, filters, state.runIndex])
   // Search matches in order, and moving the selection between them. A match
   // inside a collapsed step opens the step.
-  const searching = queryTerms(state.filters.text).length > 0
+  const searching = queryTerms(filters.text).length > 0
   const hits = useMemo(() => (searching ? hitIds(groups) : []), [searching, groups])
   const stepToHit = useCallback((delta: 1 | -1) => {
     const order = groups.flatMap((g) => g.items.map((i) => i.id))
@@ -199,7 +205,7 @@ export function App() {
             selectedId={state.selectedId}
             onSelect={(id) => dispatch({ type: 'select', id })}
             onOpen={(id) => dispatch({ type: 'openDetail', id })}
-            terms={queryTerms(state.filters.text)}
+            terms={queryTerms(filters.text)}
             onCollapse={(key, collapsed) => {
               dispatch({ type: 'setCollapsed', key, collapsed })
               // Folding a sub-agent that holds the selection moves the selection to the folded row.

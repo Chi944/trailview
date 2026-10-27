@@ -188,3 +188,24 @@ describe('parseLog', () => {
     expect(parseLog('{"type":"log","run_id":"r","id":"1","ts":"2026-10-19T10:00:00Z","message":"hi"}').format).toBe('jsonl')
   })
 })
+
+describe('parseOtlp on very large traces', () => {
+  // Spreading this many records into push() or Math.max() used to overflow the call stack.
+  it('reads a 130,000-span trace with no root agent span', { timeout: 60_000 }, () => {
+    const attributes = [
+      { key: 'gen_ai.operation.name', value: { stringValue: 'execute_tool' } },
+      { key: 'gen_ai.tool.name', value: { stringValue: 'search' } },
+    ]
+    const spans = Array.from({ length: 130_000 }, (_, i) => ({
+      traceId: 't1',
+      spanId: `s${i}`,
+      startTimeUnixNano: String(1792404000000000000n + BigInt(i) * 1000000n),
+      endTimeUnixNano: String(1792404000000000000n + BigInt(i) * 1000000n + 500000n),
+      attributes,
+    }))
+    const { events, issues } = parseOtlp(JSON.stringify({ resourceSpans: [{ scopeSpans: [{ spans }] }] }))
+    expect(issues).toEqual([])
+    expect(events).toHaveLength(130_002)
+    expect(events.at(-1)!.event).toMatchObject({ type: 'run.end', ts: '2026-10-19T10:02:09.999Z' })
+  })
+})

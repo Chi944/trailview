@@ -67,6 +67,7 @@ The address bar always points at what you are looking at: the file, the run and 
 | `npm run typecheck` | Type-check with TypeScript |
 | `npm run lint` | Lint with ESLint |
 | `npm run build` | Build the static site into `dist/` |
+| `node scripts/make-large-otel.mjs 200000 > big.json` | Write a large synthetic OTel trace for performance checks; results are in [docs/performance.md](docs/performance.md) |
 | `node scripts/record-demo.mjs` | Re-record the README GIF against `npm run preview -- --port 4173` (needs ffmpeg) |
 
 ## Licence

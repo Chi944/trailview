@@ -68,7 +68,8 @@ export function parseLangSmith(text: string): ParseResult {
   }
 
   const records: EventRecord[] = []
-  for (const [traceId, traceRuns] of byTrace) records.push(...traceToEvents(traceId, traceRuns))
+  // Appended in a loop: spreading a very large trace into push() overflows the call stack.
+  for (const [traceId, traceRuns] of byTrace) for (const record of traceToEvents(traceId, traceRuns)) records.push(record)
   return validateEvents(records, issues)
 }
 
