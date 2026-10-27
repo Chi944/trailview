@@ -1,16 +1,32 @@
 # Trailview
 
-Trailview is an open-source viewer for AI-agent runs. Load a run log and see it as a timeline: steps, model calls, tool calls with their inputs and outputs, tokens and cost, errors and retries, and the points where a person approved or rejected an action.
+[![CI](https://github.com/Chi944/trailview/actions/workflows/ci.yml/badge.svg)](https://github.com/Chi944/trailview/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Chi944/trailview)](https://github.com/Chi944/trailview/releases)
+[![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
+
+**See what your AI agent actually did.** Trailview is an open-source viewer for AI-agent runs. Load a run log and read it as a timeline: steps, model calls, tool calls with their inputs and outputs, tokens and cost, errors and retries, and the points where a person approved or rejected an action. Put two runs side by side to see where they diverged.
 
 It runs entirely in your browser, locally or as a static site. There is no account, no server and no API key, and your logs never leave your machine.
 
 ![Opening a run with sub-agents, stepping into one with the keyboard, showing the cost breakdown, searching every event for "comma", then comparing two versions of an agent](docs/media/demo.gif)
 
-**Live demo:** [chi944.github.io/trailview](https://chi944.github.io/trailview/). In the demo you pick a sample run or drop your own log file; it is read in the tab and never uploaded.
+**[Open the live demo](https://chi944.github.io/trailview/)** and pick a sample run, or drop in your own log. The file is read in the tab and never uploaded.
+
+## Features
+
+- **Three input formats**, detected from the content: Trailview's own [JSONL format](docs/schema.md), OpenTelemetry traces that follow the GenAI semantic conventions, and LangSmith exports from LangChain and LangGraph.
+- **Timeline and detail panel** for every step, model call, tool call, approval and error, with the raw event one click away.
+- **Token and cost totals**, with a breakdown per model and per sub-agent.
+- **Approvals**: who approved or rejected each action, why, and how long the run waited.
+- **Retries, crashes and sub-agents**: retried calls fold into one row, calls that never returned show as unfinished, and sub-agent work nests under the call that started it.
+- **Search** inside every prompt, output and tool payload, with `"phrases"` and `field:value` terms.
+- **Compare** two runs, aligned by the models and tools they called, with the first point of difference.
+- **Shareable links** to any event, and **Markdown export** for issues and pull requests.
+- **Keyboard first**, and fast: a 20,000-event log loads in about half a second.
 
 ## Quick start
 
-Open the demo and drop a log file on it, or run it locally:
+Open the [demo](https://chi944.github.io/trailview/) and drop a log file on it, or run it locally (Node 20 or later):
 
 ```sh
 git clone https://github.com/Chi944/trailview
@@ -21,6 +37,8 @@ npm run dev
 
 Then open http://localhost:5173 and load a file. Press `?` for keyboard shortcuts: `j`/`k` move, `Enter` opens a step, `e` toggles errors only, `/` searches, `c` shows the cost breakdown.
 
+**Using your own agent?** [Try Trailview on your own logs](docs/your-own-logs.md) walks through exporting OpenTelemetry or LangSmith traces, or adding a ten-line logger that writes Trailview's format.
+
 ## Log format
 
 Trailview reads three formats and detects which one a file is from its content:
@@ -29,7 +47,7 @@ Trailview reads three formats and detects which one a file is from its content:
 - OpenTelemetry traces exported as OTLP JSON that follow the GenAI semantic conventions;
 - LangSmith run exports from LangChain and LangGraph agents, as returned by the LangSmith SDK's `list_runs`.
 
-See [docs/schema.md](docs/schema.md) for the format and both mappings, and [samples/](samples/) for example runs.
+See [docs/schema.md](docs/schema.md) for the format and both mappings, [samples/](samples/) for example runs, and [docs/your-own-logs.md](docs/your-own-logs.md) for how to get your own runs in.
 
 If your agent can crash or be killed, also write a `model.start` or `tool.start` line when each call begins. A call that never finishes then shows as **unfinished**, so you can see what the run was waiting on when it stopped. The sample "Data backfill agent" shows one.
 
@@ -68,6 +86,10 @@ The address bar always points at what you are looking at: the file, the run and 
 | `npm run lint` | Lint with ESLint |
 | `npm run build` | Build the static site into `dist/` |
 | `node scripts/record-demo.mjs` | Re-record the README GIF against `npm run preview -- --port 4173` (needs ffmpeg) |
+
+## Contributing
+
+Issues and pull requests are welcome. Please run `npm test`, `npm run typecheck` and `npm run lint` before opening a pull request, and add a test with any parser change. If a log of yours does not load as you expect, [open an issue](https://github.com/Chi944/trailview/issues) with a few lines of it, with anything private removed.
 
 ## Licence
 
