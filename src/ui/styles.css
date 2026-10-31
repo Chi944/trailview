@@ -1006,3 +1006,86 @@ kbd {
   align-items: center;
   margin-left: auto;
 }
+
+/* Approvals lane */
+.lane {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+}
+
+.lane__label {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.lane__track {
+  position: relative;
+  flex: 1;
+  height: 1.1rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.lane__bar {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  min-width: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  cursor: pointer;
+  background: var(--warn);
+}
+
+.lane__bar--approved {
+  background: var(--ok);
+}
+
+.lane__bar--rejected {
+  background: var(--danger);
+}
+
+.lane__bar--flagged {
+  background-image: repeating-linear-gradient(135deg, transparent 0 3px, rgb(255 255 255 / 0.45) 3px 6px);
+}
+
+.lane__bar--selected {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+
+.lane__bar:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  z-index: 1;
+}
+
+/* Audit trail */
+.audit {
+  min-width: 0;
+}
+
+.audit__count {
+  margin-left: 0.5rem;
+  font-weight: normal;
+}
+
+.audit__table th,
+.audit__table td {
+  text-align: left;
+  vertical-align: top;
+}
+
+.audit__wrap {
+  white-space: normal;
+  min-width: 12rem;
+  max-width: 24rem;
+}
+
+.audit__table .badge + .badge {
+  margin-left: 0.25rem;
+}

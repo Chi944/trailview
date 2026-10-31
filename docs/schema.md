@@ -114,6 +114,8 @@ A start line is folded into the finished call whose `start_id` names it, or, for
 
 The viewer computes wait time as `decision.ts − request.ts`. A rejected request has no `tool.call`; the agent's next `model.call` shows what it did instead.
 
+The audit trail links the three by `approval_id` and flags records that break this pattern: a `tool.call` carrying the id of a rejected approval, a decision or `tool.call` whose `approval_id` was never requested, and a request with no decision.
+
 **`error`**: an error not tied to one call (crash, config problem). Fields: `error` (required).
 
 **`log`**: a free-text note from the agent. Fields: `level` (`debug|info|warn`), `message`.
