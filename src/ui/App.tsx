@@ -6,6 +6,9 @@ import { SAMPLES } from './import/samples.ts'
 import { RunHeader } from './run/RunHeader.tsx'
 import { TotalsBar } from './run/TotalsBar.tsx'
 import { CostBreakdown } from './run/CostBreakdown.tsx'
+import { ApprovalsLane, LANE_ID } from './run/ApprovalsLane.tsx'
+import { AuditTrail } from './run/AuditTrail.tsx'
+import { auditTrail } from '../core/derive/audit.ts'
 import { FilterBar, SEARCH_INPUT_ID } from './run/FilterBar.tsx'
 import { Timeline } from './timeline/Timeline.tsx'
 import { descendantsOf } from '../core/derive/nesting.ts'
@@ -28,11 +31,13 @@ export function App() {
   const [state, dispatch] = useReducer(reducer, undefined, (): AppState => ({ ...initialState, target: parseLink(location.hash) }))
   const [helpOpen, setHelpOpen] = useState(false)
   const [breakdownOpen, setBreakdownOpen] = useState(false)
+  const [auditOpen, setAuditOpen] = useState(false)
   const load = (name: string, text: string) => dispatch({ type: 'loaded', name, text })
   const loadSample = (name: string, text: string) => dispatch({ type: 'loaded', name, text, sample: true })
   const onError = (message: string) => dispatch({ type: 'loadFailed', message })
 
   const run = state.file?.runs[state.runIndex]
+  const audit = useMemo(() => (run ? auditTrail(run.approvals, run.endMs) : []), [run])
 
   // A link to a bundled sample opens it; a link to any other file waits for the reader to open that file.
   useEffect(() => {
@@ -90,6 +95,8 @@ export function App() {
       t: () => document.querySelector<HTMLElement>(TIMELINE_SELECTOR)?.focus(),
       e: () => dispatch({ type: 'setErrorsOnly', value: !state.filters.errorsOnly }),
       c: () => setBreakdownOpen((open) => !open),
+      u: () => setAuditOpen((open) => !open),
+      a: () => document.querySelector<HTMLElement>(`#${LANE_ID} [tabindex="0"]`)?.focus(),
       n: () => stepToHit(1),
       N: () => stepToHit(-1),
       Escape: () => {
@@ -166,6 +173,7 @@ export function App() {
         <>
           <TotalsBar totals={run.totals} />
           <CostBreakdown run={run} open={breakdownOpen} onToggle={setBreakdownOpen} onJump={(id) => dispatch({ type: 'openDetail', id })} />
+          <AuditTrail run={run} entries={audit} open={auditOpen} onToggle={setAuditOpen} onJump={(id) => dispatch({ type: 'openDetail', id })} />
           <FilterBar
             run={run}
             filters={state.filters}
@@ -191,6 +199,7 @@ export function App() {
               }
             />
           </FilterBar>
+          <ApprovalsLane run={run} entries={audit} selectedId={state.selectedId} onJump={(id) => dispatch({ type: 'openDetail', id })} />
           <div className={`workspace${detailItem ? ' workspace--split' : ''}`}>
           <Timeline
             run={run}

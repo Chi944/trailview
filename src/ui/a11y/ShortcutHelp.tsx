@@ -11,6 +11,8 @@ export const SHORTCUTS: [string, string][] = [
   ['n / N or Enter / Shift+Enter in the search box', 'Next or previous search match'],
   ['e', 'Toggle errors only'],
   ['c', 'Show or hide the cost breakdown'],
+  ['u', 'Show or hide the approvals audit trail'],
+  ['a', 'Focus the approvals lane (← → move between approvals, Enter opens one)'],
   ['t', 'Focus the timeline'],
   ['?', 'Show these shortcuts'],
 ]
