@@ -1,6 +1,8 @@
 import type { Run } from '../../core/model/run.ts'
 import { FilePicker } from '../import/FilePicker.tsx'
 import { SampleMenu } from '../import/SampleMenu.tsx'
+import { LoadingStatus } from '../import/LoadingStatus.tsx'
+import type { Loading } from '../state.ts'
 import { runLabel } from './labels.ts'
 
 interface Props {
@@ -8,13 +10,15 @@ interface Props {
   runIndex: number
   error?: string
   onPickRun: (index: number) => void
-  onText: (name: string, text: string) => void
-  onError: (message: string) => void
+  onFile: (file: File) => void
+  onSample: (name: string, text: string) => void
+  loading?: Loading
+  onStopLoading: () => void
   onCancel: () => void
 }
 
 // Chooses the run to compare against: another run in this file, another file, or a sample.
-export function ComparePicker({ runs, runIndex, error, onPickRun, onText, onError, onCancel }: Props) {
+export function ComparePicker({ runs, runIndex, error, onPickRun, onFile, onSample, loading, onStopLoading, onCancel }: Props) {
   const others = runs.map((run, index) => ({ run, index })).filter(({ index }) => index !== runIndex)
   return (
     <section className="compare-picker" aria-labelledby="compare-picker-heading">
@@ -38,13 +42,14 @@ export function ComparePicker({ runs, runIndex, error, onPickRun, onText, onErro
           </ul>
         </>
       )}
-      <FilePicker onText={onText} onError={onError} label="Open another log file" />
+      <FilePicker onFile={onFile} label="Open another log file" disabled={loading !== undefined} />
+      {loading && <LoadingStatus loading={loading} onCancel={onStopLoading} />}
       {error && (
         <p role="alert" className="error-text">
           {error}
         </p>
       )}
-      <SampleMenu onPick={onText} />
+      <SampleMenu onPick={onSample} />
     </section>
   )
 }

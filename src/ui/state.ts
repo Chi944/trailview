@@ -1,6 +1,7 @@
 import type { ParseIssue } from '../core/parse/jsonl.ts'
-import { parseLog, type LogFormat } from '../core/parse/detect.ts'
-import { buildRuns, type Run } from '../core/model/run.ts'
+import type { LogFormat } from '../core/parse/detect.ts'
+import type { Run } from '../core/model/run.ts'
+import { loadLog, type ParsedLog } from '../core/load.ts'
 import { NO_FILTERS, type Category, type Filters } from '../core/filter.ts'
 import type { LinkTarget } from './link.ts'
 
@@ -29,6 +30,21 @@ export interface AppState {
   // A link the page was opened with, waiting for its file; and what went wrong applying one.
   target?: LinkTarget
   linkMiss?: string
+  // A file being parsed in the background, and which side it is for.
+  loading?: Loading
+}
+
+export interface Loading {
+  name: string
+  bytes: number
+  side: 'main' | 'compare'
+}
+
+// A loaded file arrives either already parsed (from the parse worker) or as text.
+type LogSource = { text: string } | { parsed: ParsedLog }
+
+function parsedFrom(source: LogSource): ParsedLog {
+  return 'parsed' in source ? source.parsed : loadLog(source.text)
 }
 
 // The run compared against the current one, and the file it came from.
@@ -40,7 +56,9 @@ export interface CompareSide {
 }
 
 export type AppAction =
-  | { type: 'loaded'; name: string; text: string; sample?: boolean }
+  | ({ type: 'loaded'; name: string; sample?: boolean } & LogSource)
+  | { type: 'loadStarted'; loading: Loading }
+  | { type: 'loadCancelled' }
   | { type: 'linkOpened'; target: LinkTarget }
   | { type: 'loadFailed'; message: string }
   | { type: 'selectRun'; index: number }
@@ -56,7 +74,7 @@ export type AppAction =
   | { type: 'startCompare' }
   | { type: 'stopCompare' }
   | { type: 'compareWithRun'; index: number }
-  | { type: 'compareLoaded'; name: string; text: string }
+  | ({ type: 'compareLoaded'; name: string } & LogSource)
   | { type: 'selectCompareRun'; index: number }
   | { type: 'changeCompare' }
 
@@ -82,14 +100,18 @@ export const initialState: AppState = { runIndex: 0, filters: NO_FILTERS, detail
 export function reducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'loaded': {
-      const { format, events, issues } = parseLog(action.text)
-      const loaded: AppState = { ...initialState, file: { name: action.name, format, runs: buildRuns(events), issues, sample: action.sample } }
+      const { format, runs, issues } = parsedFrom(action)
+      const loaded: AppState = { ...initialState, file: { name: action.name, format, runs, issues, sample: action.sample } }
       return state.target ? applyTarget(loaded, state.target) : loaded
     }
     case 'linkOpened':
       return state.file ? applyTarget(state, action.target) : { ...state, target: action.target, linkMiss: undefined }
+    case 'loadStarted':
+      return { ...state, loading: action.loading, loadError: undefined }
+    case 'loadCancelled':
+      return { ...state, loading: undefined }
     case 'loadFailed':
-      return { ...state, loadError: action.message }
+      return { ...state, loading: undefined, loadError: action.message }
     case 'selectRun':
       return { ...state, runIndex: action.index, selectedId: undefined, detailOpen: false, collapsed: [] }
     case 'close':
@@ -97,7 +119,7 @@ export function reducer(state: AppState, action: AppAction): AppState {
     case 'startCompare':
       return { ...state, comparing: true, detailOpen: false }
     case 'stopCompare':
-      return { ...state, comparing: false, compare: undefined }
+      return { ...state, comparing: false, compare: undefined, loading: state.loading?.side === 'compare' ? undefined : state.loading }
     case 'changeCompare':
       return { ...state, compare: undefined }
     case 'compareWithRun': {
@@ -106,10 +128,9 @@ export function reducer(state: AppState, action: AppAction): AppState {
       return { ...state, compare: { name, format, runs, runIndex: action.index } }
     }
     case 'compareLoaded': {
-      const { format, events } = parseLog(action.text)
-      const runs = buildRuns(events)
-      if (runs.length === 0) return { ...state, loadError: `No runs found in ${action.name}` }
-      return { ...state, loadError: undefined, compare: { name: action.name, format, runs, runIndex: 0 } }
+      const { format, runs } = parsedFrom(action)
+      if (runs.length === 0) return { ...state, loading: undefined, loadError: `No runs found in ${action.name}` }
+      return { ...state, loading: undefined, loadError: undefined, compare: { name: action.name, format, runs, runIndex: 0 } }
     }
     case 'selectCompareRun':
       return state.compare ? { ...state, compare: { ...state.compare, runIndex: action.index } } : state

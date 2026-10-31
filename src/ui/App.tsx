@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
 import { FilePicker } from './import/FilePicker.tsx'
 import { IssuesPanel } from './import/IssuesPanel.tsx'
 import { SampleMenu } from './import/SampleMenu.tsx'
+import { LoadingStatus } from './import/LoadingStatus.tsx'
+import { useLogLoader } from './import/useLogLoader.ts'
 import { SAMPLES } from './import/samples.ts'
 import { RunHeader } from './run/RunHeader.tsx'
 import { TotalsBar } from './run/TotalsBar.tsx'
@@ -35,9 +37,9 @@ export function App() {
   const [helpOpen, setHelpOpen] = useState(false)
   const [breakdownOpen, setBreakdownOpen] = useState(false)
   const [auditOpen, setAuditOpen] = useState(false)
-  const load = (name: string, text: string) => dispatch({ type: 'loaded', name, text })
+  const loader = useLogLoader(dispatch, state.loading)
+  const loadFile = (file: File) => loader.start({ name: file.name, source: file, side: 'main' })
   const loadSample = (name: string, text: string) => dispatch({ type: 'loaded', name, text, sample: true })
-  const onError = (message: string) => dispatch({ type: 'loadFailed', message })
 
   const run = state.file?.runs[state.runIndex]
   const audit = useMemo(() => (run ? auditTrail(run.approvals, run.endMs) : []), [run])
@@ -121,7 +123,8 @@ export function App() {
       <main className="empty">
         <h1>Trailview</h1>
         <p className="lede">See an agent run as a timeline. Your log is read in this tab and never leaves your machine.</p>
-        <FilePicker onText={load} onError={onError} />
+        <FilePicker onFile={loadFile} disabled={state.loading !== undefined} />
+        {state.loading && <LoadingStatus loading={state.loading} onCancel={loader.stop} />}
         {state.loadError && (
           <p role="alert" className="error-text">
             {state.loadError}
@@ -170,8 +173,10 @@ export function App() {
             runIndex={runIndex}
             error={state.loadError}
             onPickRun={(index) => dispatch({ type: 'compareWithRun', index })}
-            onText={(name, text) => dispatch({ type: 'compareLoaded', name, text })}
-            onError={onError}
+            onFile={(f) => loader.start({ name: f.name, source: f, side: 'compare' })}
+            onSample={(name, text) => dispatch({ type: 'compareLoaded', name, text })}
+            loading={state.loading}
+            onStopLoading={loader.stop}
             onCancel={() => dispatch({ type: 'stopCompare' })}
           />
         )

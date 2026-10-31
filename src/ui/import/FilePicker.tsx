@@ -1,29 +1,24 @@
 import { useRef, useState, type DragEvent } from 'react'
 
 interface Props {
-  onText: (name: string, text: string) => void
-  onError: (message: string) => void
+  onFile: (file: File) => void
   label?: string
+  disabled?: boolean
 }
 
-// Reads a local file in the browser. Nothing is uploaded anywhere.
-export function FilePicker({ onText, onError, label = 'Open a log file' }: Props) {
+// Picks a local file. It is read in this tab, off the main thread, and never uploaded anywhere.
+export function FilePicker({ onFile, label = 'Open a log file', disabled = false }: Props) {
   const input = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
 
-  async function read(file: File | undefined) {
-    if (!file) return
-    try {
-      onText(file.name, await file.text())
-    } catch (err) {
-      onError(`Could not read ${file.name}: ${(err as Error).message}`)
-    }
+  function read(file: File | undefined) {
+    if (file) onFile(file)
   }
 
   function onDrop(e: DragEvent) {
     e.preventDefault()
     setDragging(false)
-    void read(e.dataTransfer.files[0])
+    read(e.dataTransfer.files[0])
   }
 
   return (
@@ -36,7 +31,7 @@ export function FilePicker({ onText, onError, label = 'Open a log file' }: Props
       onDragLeave={() => setDragging(false)}
       onDrop={onDrop}
     >
-      <button type="button" className="button button--primary" onClick={() => input.current?.click()}>
+      <button type="button" className="button button--primary" disabled={disabled} onClick={() => input.current?.click()}>
         {label}
       </button>
       <span className="muted">or drop one here</span>
@@ -47,7 +42,7 @@ export function FilePicker({ onText, onError, label = 'Open a log file' }: Props
         hidden
         data-testid="file-input"
         onChange={(e) => {
-          void read(e.target.files?.[0])
+          read(e.target.files?.[0])
           e.target.value = ''
         }}
       />

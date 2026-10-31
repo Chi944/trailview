@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDuration, formatTokens, formatUsd } from './format.ts'
+import { formatBytes, formatDuration, formatTokens, formatUsd } from './format.ts'
 
 describe('formatDuration', () => {
   it.each([
@@ -24,4 +24,17 @@ describe('formatUsd', () => {
 
 describe('formatTokens', () => {
   it('groups thousands', () => expect(formatTokens(16570)).toBe('16,570'))
+})
+
+describe('formatBytes', () => {
+  it.each([
+    [0, '0 B'],
+    [950, '950 B'],
+    [1_234, '1.2 KB'],
+    [12_300, '12 KB'],
+    [148_000_000, '148 MB'],
+    [2_500_000_000, '2.5 GB'],
+  ])('%d bytes is %s', (bytes, text) => {
+    expect(formatBytes(bytes)).toBe(text)
+  })
 })
