@@ -46,6 +46,25 @@ test('open an OpenTelemetry trace and see the approval it waited on', async ({ p
   await expect(page.getByRole('complementary')).toContainText('refund_over_50')
 })
 
+test('reach an approval from the approvals lane and check it in the audit trail', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /OpenTelemetry trace/ }).click()
+
+  const lane = page.getByRole('group', { name: /^Approvals:/ })
+  await expect(lane.getByRole('button')).toHaveCount(1)
+  await page.keyboard.press('a')
+  await expect(lane.getByRole('button')).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('complementary')).toContainText('refund_over_50')
+
+  await page.keyboard.press('Escape')
+  await page.locator('body').press('u')
+  const audit = page.locator('#audit-trail')
+  await expect(audit.locator('tbody tr')).toHaveCount(1)
+  await expect(audit).toContainText('refund_over_50')
+  await expect(audit).toContainText('28.9 s')
+})
+
 test('open a LangSmith export and see the failed query the agent recovered from', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: /LangSmith export/ }).click()

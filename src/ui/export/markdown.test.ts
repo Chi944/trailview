@@ -40,4 +40,15 @@ describe('runMarkdown', () => {
     expect(rows[1]).toBe('| +1 s | 1 | m `m2` | ok after retry (2 attempts) | 2.5 s | 20 / 5 | 10 in / 5 out |')
     expect(rows[2]).toBe('| +4 s | 2 | grep `t1` | error | 200 ms |  | exit: exit 1 see \\| log |')
   })
+
+  it('adds the approval audit trail with its flags, whatever the filters', () => {
+    const [r] = runsFrom([
+      ev({ type: 'approval.request', id: 'q1', ts: at(1), step: 2, approval_id: 'a1', action: 'send_email', summary: 'Mail | all', policy: 'external' }),
+      ev({ type: 'approval.decision', id: 'd1', ts: at(31), step: 2, approval_id: 'a1', decision: 'rejected', by: { kind: 'human', name: 'd' }, reason: 'Too wide' }),
+      ev({ type: 'tool.call', id: 't1', ts: at(32), step: 2, tool: 'send_email', duration_ms: 5, status: 'ok', approval_id: 'a1' }),
+    ])
+    const md = runMarkdown({ run: r!, fileName: 'x.jsonl', filters: { ...NO_FILTERS, errorsOnly: true } })
+    expect(md).toContain('**Approval audit trail**')
+    expect(md).toContain('| +0 ms `q1` | 2 | `send_email` Mail \\| all | external | rejected by d | Too wide | 30 s | send_email (ok) | **Tool ran after rejection** |')
+  })
 })

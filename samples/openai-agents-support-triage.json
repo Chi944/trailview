@@ -1,0 +1,609 @@
+[
+  {
+    "object": "trace",
+    "id": "trace_8c41d0f6b2e94a1d",
+    "workflow_name": "support-triage",
+    "group_id": "conv_9f22a7",
+    "metadata": {
+      "env": "local",
+      "ticket": "ZD-41822"
+    }
+  },
+  {
+    "object": "trace.span",
+    "id": "span_triage",
+    "trace_id": "trace_8c41d0f6b2e94a1d",
+    "parent_id": null,
+    "started_at": "2026-10-23T09:12:04.180+00:00",
+    "ended_at": "2026-10-23T09:12:45.380+00:00",
+    "span_data": {
+      "type": "agent",
+      "name": "Triage agent",
+      "handoffs": [
+        "Refund agent"
+      ],
+      "tools": [
+        "summarize_thread",
+        "lookup_order"
+      ],
+      "output_type": "str"
+    },
+    "error": null
+  },
+  {
+    "object": "trace.span",
+    "id": "span_0002",
+    "trace_id": "trace_8c41d0f6b2e94a1d",
+    "parent_id": "span_triage",
+    "started_at": "2026-10-23T09:12:04.230+00:00",
+    "ended_at": "2026-10-23T09:12:04.320+00:00",
+    "span_data": {
+      "type": "guardrail",
+      "name": "pii_in_prompt",
+      "triggered": false
+    },
+    "error": null
+  },
+  {
+    "object": "trace.span",
+    "id": "span_0003",
+    "trace_id": "trace_8c41d0f6b2e94a1d",
+    "parent_id": "span_triage",
+    "started_at": "2026-10-23T09:12:04.340+00:00",
+    "ended_at": "2026-10-23T09:12:04.600+00:00",
+    "span_data": {
+      "type": "mcp_tools",
+      "server": "orders-mcp",
+      "result": [
+        "lookup_order",
+        "lookup_shipment"
+      ]
+    },
+    "error": null
+  },
+  {
+    "object": "trace.span",
+    "id": "span_0004",
+    "trace_id": "trace_8c41d0f6b2e94a1d",
+    "parent_id": "span_triage",
+    "started_at": "2026-10-23T09:12:04.680+00:00",
+    "ended_at": "2026-10-23T09:12:08.020+00:00",
+    "span_data": {
+      "type": "response",
+      "response_id": "resp_6f1a02",
+      "model": "gpt-4o",
+      "input": [
+        {
+          "role": "system",
+          "content": "You are the triage agent for Northwind support. Use the tools to check the order before promising anything."
+        },
+        {
+          "role": "user",
+          "content": "Order #41822 arrived with a cracked screen. I want a refund, not a replacement."
+        }
+      ],
+      "usage": {
+        "input_tokens": 1180,
+        "output_tokens": 118,
+        "total_tokens": 1298,
+        "input_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "output": [
+        {
+          "id": "msg_1",
+          "type": "message",
+          "role": "assistant",
+          "status": "completed",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "Let me read the ticket history first."
+            }
+          ]
+        },
+        {
+          "id": "fc_call_sum1",
+          "type": "function_call",
+          "call_id": "call_sum1",
+          "name": "summarize_thread",
+          "arguments": "{\"ticket\":\"ZD-41822\"}"
+        }
+      ]
+    },
+    "error": null
+  },
+  {
+    "object": "trace.span",
+    "id": "span_0005",
+    "trace_id": "trace_8c41d0f6b2e94a1d",
+    "parent_id": "span_triage",
+    "started_at": "2026-10-23T09:12:08.080+00:00",
+    "ended_at": "2026-10-23T09:12:13.780+00:00",
+    "span_data": {
+      "type": "function",
+      "name": "summarize_thread",
+      "input": "{\"ticket\":\"ZD-41822\"}",
+      "output": "Customer wrote twice. The screen was cracked on arrival; they refused a replacement and asked for a refund."
+    },
+    "error": null
+  },
+  {
+    "object": "trace.span",
+    "id": "span_0006",
+    "trace_id": "trace_8c41d0f6b2e94a1d",
+    "parent_id": "span_0005",
+    "started_at": "2026-10-23T09:12:08.160+00:00",
+    "ended_at": "2026-10-23T09:12:13.700+00:00",
+    "span_data": {
+      "type": "agent",
+      "name": "Thread summarizer",
+      "handoffs": [],
+      "tools": [],
+      "output_type": "str"
+    },
+    "error": null
+  },
+  {
+    "object": "trace.span",
+    "id": "span_0007",
+    "trace_id": "trace_8c41d0f6b2e94a1d",
+    "parent_id": "span_0006",
+    "started_at": "2026-10-23T09:12:08.230+00:00",
+    "ended_at": "2026-10-23T09:12:13.620+00:00",
+    "span_data": {
+      "type": "response",
+      "response_id": "resp_6f1a1c",
+      "model": "gpt-4o-mini",
+      "input": [
+        {
+          "role": "system",
+          "content": "Summarise the ticket for the triage agent in two sentences."
+        },
+        {
+          "role": "user",
+          "content": "ZD-41822: three messages from the customer, two auto-replies."
+        }
+      ],
+      "usage": {
+        "input_tokens": 2240,
+        "output_tokens": 74,
+        "total_tokens": 2314,
+        "input_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "output": [
+        {
+          "id": "msg_1",
+          "type": "message",
+          "role": "assistant",
+          "status": "completed",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "Customer wrote twice. The screen was cracked on arrival; they refused a replacement and asked for a refund."
+            }
+          ]
+        }
+      ]
+    },
+    "error": null
+  },
+  {
+    "object": "trace.span",
+    "id": "span_0008",
+    "trace_id": "trace_8c41d0f6b2e94a1d",
+    "parent_id": "span_triage",
+    "started_at": "2026-10-23T09:12:13.880+00:00",
+    "ended_at": "2026-10-23T09:12:17.280+00:00",
+    "span_data": {
+      "type": "response",
+      "response_id": "resp_6f1a44",
+      "model": "gpt-4o",
+      "input": [
+        {
+          "role": "system",
+          "content": "You are the triage agent for Northwind support. Use the tools to check the order before promising anything."
+        },
+        {
+          "role": "user",
+          "content": "Order #41822 arrived with a cracked screen. I want a refund, not a replacement."
+        },
+        {
+          "role": "assistant",
+          "content": "Ticket summary: cracked screen on arrival, refund asked for."
+        }
+      ],
+      "usage": {
+        "input_tokens": 2960,
+        "output_tokens": 96,
+        "total_tokens": 3056,
+        "input_tokens_details": {
+          "cached_tokens": 1024
+        }
+      },
+      "output": [
+        {
+          "id": "msg_1",
+          "type": "message",
+          "role": "assistant",
+          "status": "completed",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "Checking the order."
+            }
+          ]
+        },
+        {
+          "id": "fc_call_ord1",
+          "type": "function_call",
+          "call_id": "call_ord1",
+          "name": "lookup_order",
+          "arguments": "{\"order_id\":\"41822\"}"
+        }
+      ]
+    },
+    "error": null
+  },
+  {
+    "object": "trace.span",
+    "id": "span_0009",
+    "trace_id": "trace_8c41d0f6b2e94a1d",
+    "parent_id": "span_triage",
+    "started_at": "2026-10-23T09:12:17.380+00:00",
+    "ended_at": "2026-10-23T09:12:18.230+00:00",
+    "span_data": {
+      "type": "function",
+      "name": "lookup_order",
+      "input": "{\"order_id\":\"41822\"}",
+      "output": "{\"order_id\":\"41822\",\"placed\":\"2026-10-11\",\"delivered\":\"2026-10-16\",\"total_usd\":429,\"item\":\"Northwind 27\\\" monitor\",\"refundable\":true,\"refund_window_days_left\":9}"
+    },
+    "error": null
+  },
+  {
+    "object": "trace.span",
+    "id": "span_0010",
+    "trace_id": "trace_8c41d0f6b2e94a1d",
+    "parent_id": "span_triage",
+    "started_at": "2026-10-23T09:12:18.380+00:00",
+    "ended_at": "2026-10-23T09:12:19.200+00:00",
+    "span_data": {
+      "type": "response",
+      "response_id": "resp_6f1a77",
+      "model": "gpt-4o",
+      "input": [
+        {
+          "role": "system",
+          "content": "You are the triage agent for Northwind support. Use the tools to check the order before promising anything."
+        },
+        {
+          "role": "user",
+          "content": "Order #41822 arrived with a cracked screen. I want a refund, not a replacement."
+        },
+        {
+          "role": "assistant",
+          "content": "Order 41822 is refundable."
+        }
+      ],
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "total_tokens": 0,
+        "input_tokens_details": {
+          "cached_tokens": 0
+        }
+      }
+    },
+    "error": {
+      "message": "Error getting response",
+      "data": {
+        "type": "rate_limit_error",
+        "error": "Rate limit reached for gpt-4o: please retry in 1.4s"
+      }
+    }
+  },
+  {
+    "object": "trace.span",
+    "id": "span_0011",
+    "trace_id": "trace_8c41d0f6b2e94a1d",
+    "parent_id": "span_triage",
+    "started_at": "2026-10-23T09:12:20.780+00:00",
+    "ended_at": "2026-10-23T09:12:24.580+00:00",
+    "span_data": {
+      "type": "response",
+      "response_id": "resp_6f1a90",
+      "model": "gpt-4o",
+      "input": [
+        {
+          "role": "system",
+          "content": "You are the triage agent for Northwind support. Use the tools to check the order before promising anything."
+        },
+        {
+          "role": "user",
+          "content": "Order #41822 arrived with a cracked screen. I want a refund, not a replacement."
+        },
+        {
+          "role": "assistant",
+          "content": "Order 41822 is refundable, 9 days left in the window."
+        }
+      ],
+      "usage": {
+        "input_tokens": 3310,
+        "output_tokens": 142,
+        "total_tokens": 3452,
+        "input_tokens_details": {
+          "cached_tokens": 2048
+        }
+      },
+      "output": [
+        {
+          "id": "msg_1",
+          "type": "message",
+          "role": "assistant",
+          "status": "completed",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "This is a refund inside the window, so the refund agent should take it."
+            }
+          ]
+        },
+        {
+          "id": "fc_call_ho1",
+          "type": "function_call",
+          "call_id": "call_ho1",
+          "name": "transfer_to_refund_agent",
+          "arguments": "{}"
+        }
+      ]
+    },
+    "error": null
+  },
+  {
+    "object": "trace.span",
+    "id": "span_0012",
+    "trace_id": "trace_8c41d0f6b2e94a1d",
+    "parent_id": "span_triage",
+    "started_at": "2026-10-23T09:12:24.680+00:00",
+    "ended_at": "2026-10-23T09:12:24.740+00:00",
+    "span_data": {
+      "type": "handoff",
+      "from_agent": "Triage agent",
+      "to_agent": "Refund agent"
+    },
+    "error": null
+  },
+  {
+    "object": "trace.span",
+    "id": "span_refund",
+    "trace_id": "trace_8c41d0f6b2e94a1d",
+    "parent_id": null,
+    "started_at": "2026-10-23T09:12:24.880+00:00",
+    "ended_at": "2026-10-23T09:12:45.280+00:00",
+    "span_data": {
+      "type": "agent",
+      "name": "Refund agent",
+      "handoffs": [],
+      "tools": [
+        "issue_refund"
+      ],
+      "output_type": "str"
+    },
+    "error": null
+  },
+  {
+    "object": "trace.span",
+    "id": "span_0014",
+    "trace_id": "trace_8c41d0f6b2e94a1d",
+    "parent_id": "span_refund",
+    "started_at": "2026-10-23T09:12:24.980+00:00",
+    "ended_at": "2026-10-23T09:12:28.780+00:00",
+    "span_data": {
+      "type": "response",
+      "response_id": "resp_6f1b02",
+      "model": "gpt-4o",
+      "input": [
+        {
+          "role": "system",
+          "content": "You are the refund agent. Refunds over US$200 need a human decision."
+        },
+        {
+          "role": "user",
+          "content": "Order #41822 arrived with a cracked screen. I want a refund, not a replacement."
+        },
+        {
+          "role": "assistant",
+          "content": "Order 41822: US$429.00 monitor, delivered 16 Oct, refundable."
+        }
+      ],
+      "usage": {
+        "input_tokens": 2480,
+        "output_tokens": 134,
+        "total_tokens": 2614,
+        "input_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "output": [
+        {
+          "id": "msg_1",
+          "type": "message",
+          "role": "assistant",
+          "status": "completed",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "US$429 is over the limit, so I will ask for approval."
+            }
+          ]
+        },
+        {
+          "id": "fc_call_ref1",
+          "type": "function_call",
+          "call_id": "call_ref1",
+          "name": "issue_refund",
+          "arguments": "{\"order_id\":\"41822\",\"amount_usd\":429,\"reason\":\"damaged_on_arrival\"}"
+        }
+      ]
+    },
+    "error": null
+  },
+  {
+    "object": "trace.span",
+    "id": "span_0015",
+    "trace_id": "trace_8c41d0f6b2e94a1d",
+    "parent_id": "span_refund",
+    "started_at": "2026-10-23T09:12:28.880+00:00",
+    "ended_at": "2026-10-23T09:12:28.900+00:00",
+    "span_data": {
+      "type": "custom",
+      "name": "trailview.approval.request",
+      "data": {
+        "approval_id": "ap_refund_41822",
+        "action": "issue_refund",
+        "summary": "Refund US$429.00 for order 41822 (cracked screen)",
+        "policy": "refund_over_200",
+        "call_id": "call_ref1"
+      }
+    },
+    "error": null
+  },
+  {
+    "object": "trace.span",
+    "id": "span_0016",
+    "trace_id": "trace_8c41d0f6b2e94a1d",
+    "parent_id": "span_refund",
+    "started_at": "2026-10-23T09:12:36.080+00:00",
+    "ended_at": "2026-10-23T09:12:36.100+00:00",
+    "span_data": {
+      "type": "custom",
+      "name": "trailview.approval.decision",
+      "data": {
+        "approval_id": "ap_refund_41822",
+        "decision": "approved",
+        "by": {
+          "kind": "human",
+          "name": "d"
+        },
+        "reason": "Photos match the damage report."
+      }
+    },
+    "error": null
+  },
+  {
+    "object": "trace.span",
+    "id": "span_0017",
+    "trace_id": "trace_8c41d0f6b2e94a1d",
+    "parent_id": "span_refund",
+    "started_at": "2026-10-23T09:12:36.180+00:00",
+    "ended_at": "2026-10-23T09:12:37.620+00:00",
+    "span_data": {
+      "type": "function",
+      "name": "issue_refund",
+      "input": "{\"order_id\":\"41822\",\"amount_usd\":429,\"reason\":\"damaged_on_arrival\"}",
+      "output": "{\"refund_id\":\"rf_77c012\",\"amount_usd\":429,\"status\":\"pending\",\"expected_days\":5}"
+    },
+    "error": null
+  },
+  {
+    "object": "trace.span",
+    "id": "span_0018",
+    "trace_id": "trace_8c41d0f6b2e94a1d",
+    "parent_id": "span_refund",
+    "started_at": "2026-10-23T09:12:37.780+00:00",
+    "ended_at": "2026-10-23T09:12:41.380+00:00",
+    "span_data": {
+      "type": "response",
+      "response_id": "resp_6f1b55",
+      "model": "gpt-4o",
+      "input": [
+        {
+          "role": "user",
+          "content": "Refund rf_77c012 created, pending."
+        }
+      ],
+      "usage": {
+        "input_tokens": 2910,
+        "output_tokens": 118,
+        "total_tokens": 3028,
+        "input_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "output": [
+        {
+          "id": "msg_1",
+          "type": "message",
+          "role": "assistant",
+          "status": "completed",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "Your refund of US$429.00 for order #41822 is approved and will be back on your card within 5 working days. We will email you the moment it clears."
+            }
+          ]
+        }
+      ]
+    },
+    "error": null
+  },
+  {
+    "object": "trace.span",
+    "id": "span_0019",
+    "trace_id": "trace_8c41d0f6b2e94a1d",
+    "parent_id": "span_refund",
+    "started_at": "2026-10-23T09:12:41.480+00:00",
+    "ended_at": "2026-10-23T09:12:41.660+00:00",
+    "span_data": {
+      "type": "guardrail",
+      "name": "no_delivery_promises",
+      "triggered": true
+    },
+    "error": null
+  },
+  {
+    "object": "trace.span",
+    "id": "span_0020",
+    "trace_id": "trace_8c41d0f6b2e94a1d",
+    "parent_id": "span_refund",
+    "started_at": "2026-10-23T09:12:41.780+00:00",
+    "ended_at": "2026-10-23T09:12:45.180+00:00",
+    "span_data": {
+      "type": "response",
+      "response_id": "resp_6f1b78",
+      "model": "gpt-4o",
+      "input": [
+        {
+          "role": "user",
+          "content": "Rewrite without promising an email."
+        }
+      ],
+      "usage": {
+        "input_tokens": 3040,
+        "output_tokens": 96,
+        "total_tokens": 3136,
+        "input_tokens_details": {
+          "cached_tokens": 2048
+        }
+      },
+      "output": [
+        {
+          "id": "msg_1",
+          "type": "message",
+          "role": "assistant",
+          "status": "completed",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "Your refund of US$429.00 for order #41822 is approved. Refunds usually reach the original card within 5 working days."
+            }
+          ]
+        }
+      ]
+    },
+    "error": null
+  }
+]

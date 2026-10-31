@@ -18,6 +18,10 @@ for (const scheme of ['light', 'dark'] as const) {
     await expect(page.getByRole('complementary')).toBeVisible()
     expect(await scan(page)).toEqual([])
 
+    await page.keyboard.press('u')
+    await expect(page.locator('#audit-trail tbody tr').first()).toBeVisible()
+    expect(await scan(page)).toEqual([])
+
     await page.keyboard.press('?')
     await expect(page.getByRole('dialog')).toBeVisible()
     expect(await scan(page)).toEqual([])
