@@ -22,3 +22,17 @@ export function formatUsd(n: number): string {
   if (n < 1) return `$${n.toFixed(4)}`
   return `$${n.toFixed(2)}`
 }
+
+// A file size in the units people expect: 950 B, 12.3 KB, 148 MB.
+export function formatBytes(bytes: number): string {
+  if (bytes < 1000) return `${bytes} B`
+  const units = ['KB', 'MB', 'GB']
+  let value = bytes
+  let unit = 'B'
+  for (const u of units) {
+    if (value < 1000) break
+    value /= 1000
+    unit = u
+  }
+  return `${value < 10 ? value.toFixed(1) : Math.round(value)} ${unit}`
+}

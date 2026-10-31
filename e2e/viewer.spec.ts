@@ -279,3 +279,51 @@ test('step through search matches, share the search in a link, and jump to a sub
   await expect(page.getByRole('complementary')).toContainText('code-search')
   await expect(page).toHaveURL(/event=e008/)
 })
+
+// Counts the Web Workers the page starts; the first `hang` of them never answer.
+async function watchWorkers(page: import('@playwright/test').Page, hang = 0) {
+  await page.addInitScript({
+    content: `{
+      const Real = window.Worker
+      window.__workers = 0
+      window.Worker = class extends Real {
+        constructor(url, options) {
+          super(url, options)
+          window.__workers += 1
+          if (window.__workers <= ${hang}) this.postMessage = () => {}
+        }
+      }
+    }`,
+  })
+}
+
+test('a file is parsed in a background worker', async ({ page }) => {
+  await watchWorkers(page)
+  await page.goto('/')
+  const pad = 'x'.repeat(1000)
+  const lines: string[] = []
+  for (let i = 1; i <= 5_000; i++) {
+    const ts = new Date(Date.UTC(2026, 9, 20, 8) + i * 100).toISOString()
+    lines.push(JSON.stringify({ type: 'tool.call', run_id: 'big', id: `t${i}`, ts, step: i, tool: `fetch_${i}`, duration_ms: 5, status: 'ok', output: { body: pad } }))
+  }
+  const buffer = Buffer.from(lines.join('\n'))
+  await page.getByTestId('file-input').setInputFiles({ name: 'big.jsonl', mimeType: 'application/x-ndjson', buffer })
+
+  await expect(page.getByText('5000 of 5000 shown')).toBeVisible()
+  expect(await page.evaluate('window.__workers')).toBe(1)
+})
+
+test('cancel a file that is still loading and open another one', async ({ page }) => {
+  await watchWorkers(page, 1)
+  await page.goto('/')
+  await page.getByTestId('file-input').setInputFiles({ name: 'stuck.jsonl', mimeType: 'application/x-ndjson', buffer: longLog(10) })
+
+  const status = page.getByRole('status').filter({ hasText: /Reading stuck\.jsonl \(\d+(\.\d)? KB\)/ })
+  await expect(status).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Open a log file' })).toBeDisabled()
+  await status.getByRole('button', { name: 'Cancel' }).click()
+  await expect(status).toBeHidden()
+
+  await page.getByTestId('file-input').setInputFiles({ name: 'long.jsonl', mimeType: 'application/x-ndjson', buffer: longLog(10) })
+  await expect(page.getByText('21 of 21 shown')).toBeVisible()
+})

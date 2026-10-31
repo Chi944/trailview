@@ -43,9 +43,27 @@ With 200,000 rows in the viewer:
   pauses for 250 ms before filtering. Before this, each key press took about
   one second on 200,000 rows.
 
+## Parsing in a Web Worker
+
+Opened files are read and parsed in a Web Worker (`src/ui/import/parse.worker.ts`),
+so the page keeps responding while a large file loads. It shows which file it is
+reading, with its size, and a Cancel button that stops the worker. The worker
+posts the result back in messages of 5,000 events (`src/core/transfer.ts`),
+because the page unpacks each message on its main thread: a 162 MB result sent
+as one message took about 1.8 s to unpack. Bundled samples are small and still
+parse on the main thread.
+
+Longest time the page could not respond while opening a file, measured on
+2026-10-31 as the largest gap between 10 ms timers in headless Chromium:
+
+| File | Before | With the worker |
+|---|---|---|
+| 200,000-span OTel trace, 162 MB | 3.9 s | 0.9 s, at the first render |
+| 120,000-line JSONL, 130 MB | 1.3 s | 0.6 s, at the first render |
+
 ## Known limits
 
-- Parsing runs on the page's main thread, so the tab does not respond while a
-  file of 100 MB or more loads. Moving parsing into a Web Worker is the next step.
+- Once a file has arrived, the first render of a 200,000-row timeline still
+  holds the page for under a second.
 - Timelines above 400 visible rows render only the rows in view (see
   `src/ui/timeline/window.ts`), so row count does not limit scrolling.
