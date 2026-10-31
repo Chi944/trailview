@@ -86,6 +86,7 @@ The address bar always points at what you are looking at: the file, the run and 
 |---|---|
 | `npm run dev` | Start the dev server |
 | `npm test` | Run the unit tests (Vitest) |
+| `FUZZ_RUNS=5000 npm test -- fuzz` | Run the parser fuzz tests longer than CI does (200 cases each) |
 | `npm run e2e` | Run the browser tests, including an axe accessibility scan (Playwright) |
 | `npm run typecheck` | Type-check with TypeScript |
 | `npm run lint` | Lint with ESLint |

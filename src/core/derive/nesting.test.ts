@@ -62,6 +62,20 @@ describe('nestItems', () => {
     expect(run!.items.map((i) => i.depth)).toEqual([0, 0, 0])
   })
 
+  it('leaves work below a cycle at the top level too', () => {
+    const [run] = runsFrom([tool('x', 1, 0, { parent_id: 'y' }), tool('y', 1, 1, { parent_id: 'x' }), tool('z', 1, 2, { parent_id: 'x' })])
+    expect(run!.items.map((i) => i.depth)).toEqual([0, 0, 0])
+  })
+
+  it('nests a 20,000-deep chain of sub-agents without overflowing the stack', () => {
+    const chain = Array.from({ length: 20_000 }, (_, i) =>
+      ev({ type: 'agent.call', id: `a${i}`, ...(i > 0 && { parent_id: `a${i - 1}` }), agent: { name: 'sub' }, duration_ms: 1, status: 'ok' }),
+    )
+    const [run] = runsFrom(chain)
+    expect(run!.items.at(-1)).toMatchObject({ id: 'a19999', depth: 19_999, descendants: 0 })
+    expect(run!.items[0]!.descendants).toBe(19_999)
+  })
+
   it('still counts nested calls in the run totals', () => {
     const [run] = runsFrom(lines)
     expect(run!.totals).toMatchObject({ modelCalls: 4, toolCalls: 2 })

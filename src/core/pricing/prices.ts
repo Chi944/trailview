@@ -50,7 +50,8 @@ export function findPrice(model: string, overrides: PriceTable = {}, table: Pric
 }
 
 function lookup(model: string, table: PriceTable): ModelPrice | undefined {
-  if (table[model]) return table[model]
+  // Own keys only: a model named "constructor" must not find Object.prototype.
+  if (Object.hasOwn(table, model)) return table[model]
   let best: string | undefined
   for (const key of Object.keys(table)) {
     if (model.startsWith(key) && (!best || key.length > best.length)) best = key

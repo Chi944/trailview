@@ -99,19 +99,20 @@ function readSpans(text: string, issues: ParseIssue[]): Span[] {
     })
   }
 
+  // Files come from many exporters, so every level is checked before it is read.
   for (const { line, value } of docs) {
-    const resourceSpans = (value as { resourceSpans?: unknown })?.resourceSpans
+    const resourceSpans = isObject(value) ? value.resourceSpans : undefined
     if (!Array.isArray(resourceSpans)) {
       issues.push({ line, severity: 'error', message: 'Expected an OTLP export with "resourceSpans"' })
       continue
     }
-    for (const rs of resourceSpans as { resource?: { attributes?: KeyValue[] }; scopeSpans?: { spans?: OtlpSpan[] }[] }[]) {
-      const resource = attributes(rs.resource?.attributes)
-      for (const ss of rs.scopeSpans ?? []) {
-        for (const raw of ss.spans ?? []) {
-          const span = toSpan(raw, resource, line)
+    for (const rs of resourceSpans) {
+      const resource = attributes(isObject(rs) && isObject(rs.resource) ? rs.resource.attributes : undefined)
+      for (const ss of isObject(rs) ? list(rs.scopeSpans) : []) {
+        for (const raw of isObject(ss) ? list(ss.spans) : []) {
+          const span = isObject(raw) ? toSpan(raw as OtlpSpan, resource, line) : undefined
           if (span) spans.push(span)
-          else issues.push({ line, severity: 'error', message: `Span "${raw.name ?? '?'}" is missing traceId, spanId or times` })
+          else issues.push({ line, severity: 'error', message: `Span "${str((raw as OtlpSpan)?.name) ?? '?'}" is missing traceId, spanId or times` })
         }
       }
     }
@@ -122,25 +123,30 @@ function readSpans(text: string, issues: ParseIssue[]): Span[] {
 function toSpan(raw: OtlpSpan, resource: Record<string, unknown>, line: number): Span | undefined {
   const startMs = nanosToMs(raw.startTimeUnixNano)
   const endMs = nanosToMs(raw.endTimeUnixNano)
-  if (!raw.traceId || !raw.spanId || startMs === undefined || endMs === undefined) return undefined
-  const code = raw.status?.code
+  const traceId = str(raw.traceId)
+  const spanId = str(raw.spanId)
+  if (!traceId || !spanId || startMs === undefined || endMs === undefined) return undefined
+  const status = isObject(raw.status) ? raw.status : {}
+  const code = status.code
   return {
     line,
-    traceId: raw.traceId,
-    spanId: raw.spanId,
-    parentSpanId: raw.parentSpanId || undefined,
-    name: raw.name ?? '',
+    traceId,
+    spanId,
+    parentSpanId: str(raw.parentSpanId),
+    name: str(raw.name) ?? '',
     startMs,
     endMs: Math.max(endMs, startMs),
     attrs: attributes(raw.attributes),
     resource,
-    events: (raw.events ?? []).map((e) => ({
-      timeMs: nanosToMs(e.timeUnixNano) ?? startMs,
-      name: e.name ?? '',
-      attrs: attributes(e.attributes),
-    })),
+    events: list(raw.events)
+      .filter(isObject)
+      .map((e) => ({
+        timeMs: nanosToMs(e.timeUnixNano as OtlpSpan['startTimeUnixNano']) ?? startMs,
+        name: str(e.name) ?? '',
+        attrs: attributes(e.attributes as KeyValue[] | undefined),
+      })),
     error: code === 2 || code === 'STATUS_CODE_ERROR',
-    statusMessage: raw.status?.message || undefined,
+    statusMessage: str(status.message),
   }
 }
 
@@ -375,21 +381,23 @@ function errorInfo(span: Span): { type: string; message: string } {
   return { type, message }
 }
 
-function attributes(list: KeyValue[] | undefined): Record<string, unknown> {
-  const out: Record<string, unknown> = {}
-  for (const kv of list ?? []) if (kv?.key) out[kv.key] = anyValue(kv.value)
+function attributes(values: unknown): Record<string, unknown> {
+  // A null-prototype object, so keys such as "__proto__" are kept as plain attributes.
+  const out: Record<string, unknown> = Object.create(null)
+  for (const kv of list(values)) if (isObject(kv) && str(kv.key)) out[kv.key as string] = anyValue(kv.value)
   return out
 }
 
-function anyValue(v: AnyValue | undefined): unknown {
-  if (!v) return undefined
-  if (v.stringValue !== undefined) return v.stringValue
-  if (v.boolValue !== undefined) return v.boolValue
-  if (v.intValue !== undefined) return Number(v.intValue)
-  if (v.doubleValue !== undefined) return v.doubleValue
-  if (v.arrayValue) return (v.arrayValue.values ?? []).map(anyValue)
-  if (v.kvlistValue) return attributes(v.kvlistValue.values)
-  if (v.bytesValue !== undefined) return v.bytesValue
+function anyValue(v: unknown, depth = 0): unknown {
+  if (!isObject(v) || depth > 32) return undefined
+  const value = v as AnyValue
+  if (value.stringValue !== undefined) return value.stringValue
+  if (value.boolValue !== undefined) return value.boolValue
+  if (value.intValue !== undefined) return Number(value.intValue)
+  if (value.doubleValue !== undefined) return value.doubleValue
+  if (isObject(value.arrayValue)) return list(value.arrayValue.values).map((item) => anyValue(item, depth + 1))
+  if (isObject(value.kvlistValue)) return attributes(value.kvlistValue.values)
+  if (value.bytesValue !== undefined) return value.bytesValue
   return undefined
 }
 
@@ -397,7 +405,9 @@ function nanosToMs(value: string | number | undefined): number | undefined {
   if (value === undefined || value === '') return undefined
   try {
     const ns = BigInt(typeof value === 'number' ? Math.round(value) : value)
-    return Number(ns / 1000n) / 1000
+    const ms = Number(ns / 1000n) / 1000
+    // Outside the range a Date can hold, so it could not be shown as a time.
+    return Math.abs(ms) <= MAX_DATE_MS ? ms : undefined
   } catch {
     return undefined
   }
@@ -414,6 +424,9 @@ function json(value: unknown): unknown {
 }
 
 const messages = json
+const MAX_DATE_MS = 8.64e15
+const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
+const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
 const iso = (ms: number) => new Date(ms).toISOString()
 const str = (v: unknown) => (typeof v === 'string' && v !== '' ? v : undefined)
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
