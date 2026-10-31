@@ -76,7 +76,8 @@ export function parseOtlp(text: string): ParseResult {
   }
 
   const records: EventRecord[] = []
-  for (const traceSpans of byTrace.values()) records.push(...traceToEvents(traceSpans))
+  // Appended in a loop: spreading a 100k-span trace into push() overflows the call stack.
+  for (const traceSpans of byTrace.values()) for (const record of traceToEvents(traceSpans)) records.push(record)
   return validateEvents(records, issues)
 }
 
@@ -158,7 +159,7 @@ function traceToEvents(spans: Span[]): EventRecord[] {
   const root = agentSpans[0]
   const first = spans[0]!
   const startMs = root?.startMs ?? first.startMs
-  const endMs = root?.endMs ?? Math.max(...spans.map((s) => s.endMs))
+  const endMs = root?.endMs ?? spans.reduce((max, s) => Math.max(max, s.endMs), -Infinity)
   const out: EventRecord[] = []
   const add = (line: number, value: Record<string, unknown>) => out.push({ line, value: { run_id: runId, ...value } })
 
