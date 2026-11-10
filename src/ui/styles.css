@@ -144,6 +144,8 @@ h2 {
 .viewer {
   padding: 1rem;
   display: grid;
+  /* minmax(0, …) so a wide table scrolls inside its panel instead of widening the page. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   max-width: 90rem;
   margin: 0 auto;
@@ -557,6 +559,11 @@ h2 {
 
 .row__label {
   font-weight: 600;
+  /* The label keeps its width and the summary gives way; a label longer than the row is cut. */
+  flex: none;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .row--error .row__label {
@@ -565,6 +572,7 @@ h2 {
 
 .row__summary {
   color: var(--muted);
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -610,17 +618,6 @@ h2 {
   background: var(--kind);
   border-radius: 2px;
   min-width: 2px;
-}
-
-@media (max-width: 720px) {
-  .row {
-    grid-template-columns: 0.25rem minmax(0, 1fr) auto;
-  }
-  .row__offset,
-  .row__duration,
-  .row__bar {
-    display: none;
-  }
 }
 
 /* Dialog */
@@ -696,6 +693,19 @@ kbd {
 
 .workspace--split .row__bar {
   display: none;
+}
+
+/* Narrow windows drop the clock columns, with or without the detail panel open. */
+@media (max-width: 720px) {
+  .row,
+  .workspace--split .row {
+    grid-template-columns: 0.25rem minmax(0, 1fr) auto;
+  }
+  .row__offset,
+  .row__duration,
+  .row__bar {
+    display: none;
+  }
 }
 
 /* Detail panel */

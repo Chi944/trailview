@@ -327,3 +327,27 @@ test('cancel a file that is still loading and open another one', async ({ page }
   await page.getByTestId('file-input').setInputFiles({ name: 'long.jsonl', mimeType: 'application/x-ndjson', buffer: longLog(10) })
   await expect(page.getByText('21 of 21 shown')).toBeVisible()
 })
+
+test('a narrow window keeps the page from scrolling sideways and rows from overlapping', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 })
+  await page.goto('/')
+  await page.getByRole('button', { name: /OpenAI Agents SDK trace/ }).click()
+  await expect(page.getByRole('listbox', { name: 'Run timeline' })).toBeVisible()
+  // The wide cost and audit tables, and the detail panel, all open at once.
+  await page.keyboard.press('c')
+  await page.keyboard.press('u')
+  await page.keyboard.press('t')
+  await page.keyboard.press('ArrowDown')
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('complementary')).toBeVisible()
+
+  expect(await page.locator('html').evaluate((html) => html.scrollWidth)).toBeLessThanOrEqual(375)
+  const overlaps = await page.locator('.row').evaluateAll((rows) =>
+    rows.filter((row) => {
+      const text = row.querySelector('.row__text')!.getBoundingClientRect()
+      const badges = row.querySelector('.row__badges')!.getBoundingClientRect()
+      return badges.width > 0 && text.right > badges.left + 1
+    }).length,
+  )
+  expect(overlaps).toBe(0)
+})
