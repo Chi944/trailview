@@ -27,7 +27,7 @@ export function ComparePicker({ runs, runIndex, error, onPickRun, onFile, onSamp
   return (
     <section className="compare-picker" aria-labelledby="compare-picker-heading">
       <div className="compare-picker__head">
-        <h2 id="compare-picker-heading" ref={heading} tabIndex={-1} className="focus-target">Compare {runLabel(runs[runIndex])} with another run</h2>
+        <h2 id="compare-picker-heading" ref={heading} tabIndex={-1}>Compare {runLabel(runs[runIndex])} with another run</h2>
         <button type="button" className="button" onClick={onCancel}>
           Cancel
         </button>

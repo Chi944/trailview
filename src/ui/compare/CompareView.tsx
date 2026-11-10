@@ -28,7 +28,7 @@ export function CompareView({ a, b, bRuns, bIndex, onSelectB, onChange, onDone }
   return (
     <section className="compare" aria-labelledby="compare-heading">
       <div className="compare__head">
-        <h2 id="compare-heading" ref={heading} tabIndex={-1} className="focus-target">Comparing two runs</h2>
+        <h2 id="compare-heading" ref={heading} tabIndex={-1}>Comparing two runs</h2>
         <div className="compare__actions">
           {bRuns.length > 1 && (
             <label>
