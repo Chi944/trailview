@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { FilePicker } from './import/FilePicker.tsx'
 import { IssuesPanel } from './import/IssuesPanel.tsx'
 import { SampleMenu } from './import/SampleMenu.tsx'
@@ -21,6 +21,7 @@ import { DetailPanel } from './detail/DetailPanel.tsx'
 import { ComparePicker } from './compare/ComparePicker.tsx'
 import { CompareView } from './compare/CompareView.tsx'
 import { useGlobalKeys } from './a11y/useGlobalKeys.ts'
+import { focusLost } from './a11y/useFocusOnMount.ts'
 import { initialState, reducer, type AppState } from './state.ts'
 import { ExportButtons } from './export/ExportButtons.tsx'
 import { runMarkdown } from './export/markdown.ts'
@@ -42,6 +43,15 @@ export function App() {
   const loadSample = (name: string, text: string) => dispatch({ type: 'loaded', name, text, sample: true })
 
   const run = state.file?.runs[state.runIndex]
+
+  // Leaving the comparison removes the control that had focus; the timeline takes it back.
+  const wasComparing = useRef(false)
+  useEffect(() => {
+    if (wasComparing.current && !state.comparing && focusLost(document.activeElement, document.body)) {
+      document.querySelector<HTMLElement>(TIMELINE_SELECTOR)?.focus({ preventScroll: true })
+    }
+    wasComparing.current = state.comparing
+  }, [state.comparing])
   const audit = useMemo(() => (run ? auditTrail(run.approvals, run.endMs) : []), [run])
 
   // A link to a bundled sample opens it; a link to any other file waits for the reader to open that file.

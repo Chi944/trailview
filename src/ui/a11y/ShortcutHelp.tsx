@@ -19,7 +19,14 @@ export const SHORTCUTS: [string, string][] = [
 
 export function ShortcutHelp({ onClose }: { onClose: () => void }) {
   const close = useRef<HTMLButtonElement>(null)
-  useEffect(() => close.current?.focus(), [])
+  // Focus moves into the list while it is open and back to where it was after.
+  useEffect(() => {
+    const before = document.activeElement as HTMLElement | null
+    close.current?.focus()
+    return () => {
+      if (before?.isConnected) before.focus()
+    }
+  }, [])
   return (
     <div className="overlay" onClick={onClose}>
       <div
@@ -28,6 +35,13 @@ export function ShortcutHelp({ onClose }: { onClose: () => void }) {
         aria-modal="true"
         aria-labelledby="shortcuts-title"
         onClick={(e) => e.stopPropagation()}
+        // The close button is the only control, so Tab stays on it rather than leaving the dialog.
+        onKeyDown={(e) => {
+          if (e.key === 'Tab') {
+            e.preventDefault()
+            close.current?.focus()
+          }
+        }}
       >
         <h2 id="shortcuts-title">Keyboard shortcuts</h2>
         <dl className="shortcuts">

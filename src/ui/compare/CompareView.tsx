@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import type { Run } from '../../core/model/run.ts'
 import { compareRuns, type StepPair, type StepSummary, type TotalsRow } from '../../core/compare/compare.ts'
 import { formatDuration, formatTokens, formatUsd } from '../format.ts'
 import { runLabel } from './labels.ts'
+import { useFocusOnMount } from '../a11y/useFocusOnMount.ts'
 
 interface Side {
   run: Run
@@ -22,10 +23,12 @@ interface Props {
 
 export function CompareView({ a, b, bRuns, bIndex, onSelectB, onChange, onDone }: Props) {
   const result = useMemo(() => compareRuns(a.run, b.run), [a.run, b.run])
+  const heading = useRef<HTMLHeadingElement>(null)
+  useFocusOnMount(heading)
   return (
     <section className="compare" aria-labelledby="compare-heading">
       <div className="compare__head">
-        <h2 id="compare-heading">Comparing two runs</h2>
+        <h2 id="compare-heading" ref={heading} tabIndex={-1}>Comparing two runs</h2>
         <div className="compare__actions">
           {bRuns.length > 1 && (
             <label>

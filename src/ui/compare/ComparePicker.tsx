@@ -1,9 +1,11 @@
+import { useRef } from 'react'
 import type { Run } from '../../core/model/run.ts'
 import { FilePicker } from '../import/FilePicker.tsx'
 import { SampleMenu } from '../import/SampleMenu.tsx'
 import { LoadingStatus } from '../import/LoadingStatus.tsx'
 import type { Loading } from '../state.ts'
 import { runLabel } from './labels.ts'
+import { useFocusOnMount } from '../a11y/useFocusOnMount.ts'
 
 interface Props {
   runs: Run[]
@@ -19,11 +21,13 @@ interface Props {
 
 // Chooses the run to compare against: another run in this file, another file, or a sample.
 export function ComparePicker({ runs, runIndex, error, onPickRun, onFile, onSample, loading, onStopLoading, onCancel }: Props) {
+  const heading = useRef<HTMLHeadingElement>(null)
+  useFocusOnMount(heading)
   const others = runs.map((run, index) => ({ run, index })).filter(({ index }) => index !== runIndex)
   return (
     <section className="compare-picker" aria-labelledby="compare-picker-heading">
       <div className="compare-picker__head">
-        <h2 id="compare-picker-heading">Compare {runLabel(runs[runIndex])} with another run</h2>
+        <h2 id="compare-picker-heading" ref={heading} tabIndex={-1}>Compare {runLabel(runs[runIndex])} with another run</h2>
         <button type="button" className="button" onClick={onCancel}>
           Cancel
         </button>
