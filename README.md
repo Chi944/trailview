@@ -14,7 +14,7 @@ It runs entirely in your browser, locally or as a static site. There is no accou
 
 ## Features
 
-- **Three input formats**, detected from the content: Trailview's own [JSONL format](docs/schema.md), OpenTelemetry traces that follow the GenAI semantic conventions, and LangSmith exports from LangChain and LangGraph.
+- **Four input formats**, detected from the content: Trailview's own [JSONL format](docs/schema.md), OpenTelemetry traces that follow the GenAI semantic conventions, LangSmith exports from LangChain and LangGraph, and OpenAI Agents SDK traces.
 - **Timeline and detail panel** for every step, model call, tool call, approval and error, with the raw event one click away.
 - **Token and cost totals**, with a breakdown per model and per sub-agent.
 - **Approvals**: who approved or rejected each action, why, and how long the run waited.

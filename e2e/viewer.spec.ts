@@ -351,3 +351,33 @@ test('a narrow window keeps the page from scrolling sideways and rows from overl
   )
   expect(overlaps).toBe(0)
 })
+
+test('focus follows the keyboard into and out of the shortcut list and the comparison', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /On-call digest: a retried/ }).click()
+  const timeline = page.getByRole('listbox', { name: 'Run timeline' })
+  await expect(timeline).toBeVisible()
+  await page.keyboard.press('t')
+  await expect(timeline).toBeFocused()
+
+  // The shortcut list keeps Tab inside it and hands focus back when it closes.
+  await page.keyboard.press('?')
+  const close = page.getByRole('dialog').getByRole('button', { name: 'Close' })
+  await expect(close).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(close).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(timeline).toBeFocused()
+
+  // Opening a comparison puts focus on it, not back at the top of the page.
+  await page.getByRole('button', { name: 'Compare' }).press('Enter')
+  await expect(page.getByRole('heading', { name: /^Compare .* with another run$/ })).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('button', { name: 'Cancel' })).toBeFocused()
+  await page.getByRole('button', { name: /Two runs to compare/ }).press('Enter')
+  await expect(page.getByRole('heading', { name: 'Comparing two runs' })).toBeFocused()
+
+  // Leaving it returns focus to the timeline.
+  await page.keyboard.press('Escape')
+  await expect(timeline).toBeFocused()
+})
