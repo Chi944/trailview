@@ -140,7 +140,7 @@ Any `input` or `output` may be replaced by `{ "truncated": true, "bytes": n, "pr
 
 ## OpenTelemetry import
 
-Trailview also opens OpenTelemetry traces in OTLP/JSON: the format the Collector's file exporter writes, one export request per line, or a single exported document. The format is detected from the content, so the file name does not matter. Spans are read using the [GenAI semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai) as of October 2026. Those conventions are still marked as in development, so names may change.
+Trailview also opens OpenTelemetry traces in OTLP/JSON: the format the Collector's file exporter writes, one export request per line, or a single exported document. The format is detected from the content, so the file name does not matter. A file whose first line is a Trailview event (it has `type` and `run_id`) is always read as Trailview JSONL, even when its payloads hold another format's keys. Spans are read using the [GenAI semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai) as of October 2026. Those conventions are still marked as in development, so names may change.
 
 | OTel | Trailview |
 |---|---|
@@ -213,7 +213,7 @@ See [`samples/langsmith-sql-analyst.json`](../samples/langsmith-sql-analyst.json
 
 ## OpenAI Agents SDK import
 
-The Agents SDK has no export file of its own, so Trailview reads the objects its tracing API returns: `trace.export()` and `span.export()`, as one JSON object per line, as a JSON array, or as a `{ "data": [...] }` page from the traces API. A span written once when it starts and again when it ends is read as one call, keeping the finished copy.
+The Agents SDK has no export file of its own, so Trailview reads the objects its tracing API returns: `trace.export()` and `span.export()`, as one JSON object per line, as a JSON array, or as a `{ "object": "list", "data": [...] }` page from the traces API. A span written once when it starts and again when it ends is read as one call, keeping the finished copy.
 
 A `TracingProcessor` writes the file. The SDK leaves the model, usage and output off a `response` span (it keeps only the response id), so the processor copies them on; without that you still get every call and its timing, but no tokens or cost.
 

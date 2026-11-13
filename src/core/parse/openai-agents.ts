@@ -114,7 +114,8 @@ function readItems(text: string, issues: ParseIssue[]): { traces: Map<string, Tr
       issues.push({ line, severity: 'error', message: 'Expected a trace or span object' })
       return
     }
-    if (value.object === undefined && Array.isArray(value.data)) {
+    // A page from the traces API: { "object": "list", "data": [...] }, with or without the object field.
+    if ((value.object === undefined || value.object === 'list') && Array.isArray(value.data)) {
       visit(value.data, line)
       return
     }

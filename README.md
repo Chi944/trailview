@@ -48,7 +48,7 @@ Trailview reads four formats and detects which one a file is from its content:
 - LangSmith run exports from LangChain and LangGraph agents, as returned by the LangSmith SDK's `list_runs`;
 - OpenAI Agents SDK traces, the objects its `trace.export()` and `span.export()` return, written by the 15-line processor in [docs/schema.md](docs/schema.md#openai-agents-sdk-import).
 
-See [docs/schema.md](docs/schema.md) for the format and all three mappings, [samples/](samples/) for example runs, and [docs/your-own-logs.md](docs/your-own-logs.md) for how to get your own runs in.
+See [docs/schema.md](docs/schema.md) for the format and all three mappings from other tools, [samples/](samples/) for example runs, and [docs/your-own-logs.md](docs/your-own-logs.md) for how to get your own runs in.
 
 If your agent can crash or be killed, also write a `model.start` or `tool.start` line when each call begins. A call that never finishes then shows as **unfinished**, so you can see what the run was waiting on when it stopped. The sample "Data backfill agent" shows one.
 
