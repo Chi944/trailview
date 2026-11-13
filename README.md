@@ -8,7 +8,7 @@
 
 It runs entirely in your browser, locally or as a static site. There is no account, no server and no API key, and your logs never leave your machine.
 
-![Opening a run with sub-agents, stepping into one with the keyboard, showing the cost breakdown, searching every event for "comma", then comparing two versions of an agent](docs/media/demo.gif)
+![Opening a run with sub-agents, stepping into one with the keyboard, showing the cost breakdown, searching every event for "comma", opening an approval from the approvals lane and the audit trail, then comparing two versions of an agent](docs/media/demo.gif)
 
 **[Open the live demo](https://chi944.github.io/trailview/)** and pick a sample run, or drop in your own log. The file is read in the tab and never uploaded.
 
