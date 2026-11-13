@@ -50,4 +50,18 @@ describe('start lines', () => {
     const [run] = runsFrom([toolStart('ts1', 0)])
     expect(run!.events[0]!.event).toMatchObject({ type: 'tool.call', duration_ms: 0, unfinished: true })
   })
+
+  it('drop fields only a finished call carries, so stray ones cannot break the totals', () => {
+    const [run] = runsFrom([
+      runStart,
+      modelStart('ms1', 1, { usage: [], cost_usd: 'lots', output: { text: 'early' }, stop_reason: 'end_turn' }),
+      toolStart('ts1', 2, { output: 'early' }),
+    ])
+    const [m, t] = run!.events.slice(1).map((e) => e.event)
+    for (const key of ['usage', 'cost_usd', 'output', 'stop_reason']) {
+      expect(m).not.toHaveProperty(key)
+      expect(t).not.toHaveProperty(key)
+    }
+    expect(run!.totals).toMatchObject({ inputTokens: 0, outputTokens: 0, costUsd: 0, modelCalls: 1 })
+  })
 })

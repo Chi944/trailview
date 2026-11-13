@@ -46,7 +46,15 @@ export function resolveStarts(events: ParsedEvent[]): ParsedEvent[] {
   return resolved
 }
 
+// Fields only a finished call may carry. A start line is not checked for
+// them, so a stray one (usage: [], cost_usd: "0.1") must not reach the call
+// built from it, where totals would read it as numbers.
+const FINISHED_ONLY = ['usage', 'cost_usd', 'output', 'stop_reason'] as const
+
 function unfinishedCall(start: ModelStartEvent | ToolStartEvent, durationMs: number): ModelCallEvent | ToolCallEvent {
+  const kept: Record<string, unknown> = { ...start }
+  for (const key of FINISHED_ONLY) delete kept[key]
+  const base = kept as ModelStartEvent | ToolStartEvent
   const fields = {
     start_id: start.id,
     duration_ms: durationMs,
@@ -54,7 +62,7 @@ function unfinishedCall(start: ModelStartEvent | ToolStartEvent, durationMs: num
     error: { type: UNFINISHED_ERROR_TYPE, message: 'Started but never finished: the log ends before this call returned.' },
     unfinished: true,
   }
-  return start.type === 'model.start' ? { ...start, ...fields, type: 'model.call' } : { ...start, ...fields, type: 'tool.call' }
+  return base.type === 'model.start' ? { ...base, ...fields, type: 'model.call' } : { ...base, ...fields, type: 'tool.call' }
 }
 
 export function isUnfinished(parsed: ParsedEvent): boolean {

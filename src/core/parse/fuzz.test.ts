@@ -4,18 +4,21 @@ import { parseLog } from './detect.ts'
 import { parseJsonl } from './jsonl.ts'
 import { parseOtlp } from './otel.ts'
 import { parseLangSmith } from './langsmith.ts'
+import { parseOpenAiAgents } from './openai-agents.ts'
 import { buildRuns } from '../model/run.ts'
 import { KNOWN_EVENT_TYPES } from '../schema/events.ts'
 import JSONL_SAMPLE from '../../../samples/dev-lead-subagents.jsonl?raw'
 import OTLP_TEXT from '../../../samples/otel-support-refund.json?raw'
 import LANGSMITH_TEXT from '../../../samples/langsmith-sql-analyst.json?raw'
+import AGENTS_TEXT from '../../../samples/openai-agents-support-triage.json?raw'
 
-// Property tests for the three importers. Logs come from other people's
+// Property tests for the four importers. Logs come from other people's
 // tools, so a broken or hostile file must never throw: the parser reports
 // issues and the viewer still builds runs from whatever was valid.
 
 const OTLP_SAMPLE = JSON.parse(OTLP_TEXT) as unknown
 const LANGSMITH_SAMPLE = JSON.parse(LANGSMITH_TEXT) as unknown
+const AGENTS_SAMPLE = JSON.parse(AGENTS_TEXT) as unknown
 
 // FUZZ_RUNS=5000 npm test runs a longer search locally.
 const RUNS = Number(import.meta.env.FUZZ_RUNS ?? 200)
@@ -128,7 +131,7 @@ describe('parser fuzzing', { timeout: 120_000 }, () => {
     fc.assert(
       fc.property(anyJson, (value) => {
         const text = JSON.stringify(value) ?? 'null'
-        for (const parse of [parseJsonl, parseOtlp, parseLangSmith]) checkResult(text, parse(text))
+        for (const parse of [parseJsonl, parseOtlp, parseLangSmith, parseOpenAiAgents]) checkResult(text, parse(text))
       }),
       { numRuns: RUNS },
     )
@@ -180,6 +183,27 @@ describe('parser fuzzing', { timeout: 120_000 }, () => {
       { numRuns: RUNS },
     )
   })
+
+  it('OpenAI Agents: a sample with fields replaced or removed never throws', () => {
+    fc.assert(
+      fc.property(mutated(AGENTS_SAMPLE), (doc) => {
+        const text = JSON.stringify(doc) ?? 'null'
+        checkResult(text, parseOpenAiAgents(text))
+      }),
+      { numRuns: RUNS },
+    )
+  })
+
+  it('OpenAI Agents: one item per line, with lines mutated, never throws', () => {
+    const items = (Array.isArray(AGENTS_SAMPLE) ? AGENTS_SAMPLE : ((AGENTS_SAMPLE as { data?: unknown[] }).data ?? [])) as unknown[]
+    fc.assert(
+      fc.property(mutated(items), (doc) => {
+        const text = Array.isArray(doc) ? doc.map((l) => JSON.stringify(l) ?? '').join('\n') : (JSON.stringify(doc) ?? '')
+        checkResult(text, parseOpenAiAgents(text))
+      }),
+      { numRuns: RUNS },
+    )
+  })
 })
 
 // Shapes the random search is unlikely to build, each of which used to throw.
@@ -201,6 +225,13 @@ describe('pathological inputs', () => {
     const span = { traceId: 't1', spanId: 's1', startTimeUnixNano: '9'.repeat(30), endTimeUnixNano: '1', attributes: [] }
     const result = parseOtlp(JSON.stringify({ resourceSpans: [{ scopeSpans: [{ spans: [span] }] }] }))
     expect(result.issues.map((i) => i.message)).toEqual(['Span "?" is missing traceId, spanId or times'])
+  })
+
+  it('OpenAI Agents: numeric times past the range a Date can hold are skipped, not thrown', () => {
+    const span = (started_at: unknown) => ({ object: 'trace.span', id: 's1', trace_id: 't1', started_at, ended_at: 1e300, span_data: { type: 'function', name: 'f' } })
+    for (const started_at of [1e300, 8.64e15 + 1, -1e300]) {
+      expect(() => checkResult('x', parseOpenAiAgents(JSON.stringify([span(started_at)])))).not.toThrow()
+    }
   })
 
   it('OTel: attributes, events and spans that are not lists are skipped', () => {
