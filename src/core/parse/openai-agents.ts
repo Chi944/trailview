@@ -522,7 +522,8 @@ function errorOf(span: Span): { type: string; message: string } {
 
 // The Python SDK writes ISO times with an offset; treat any without one as UTC.
 function timeMs(value: unknown): number | undefined {
-  if (typeof value === 'number' && Number.isFinite(value)) return value
+  // Numbers outside the range a Date can hold could not be shown as a time.
+  if (typeof value === 'number') return Math.abs(value) <= MAX_DATE_MS ? value : undefined
   if (typeof value !== 'string' || value === '') return undefined
   const withZone = /(?:Z|[+-]\d\d:?\d\d)$/i.test(value) ? value : `${value}Z`
   const ms = Date.parse(withZone)
@@ -538,6 +539,7 @@ function json(value: unknown): unknown {
   }
 }
 
+const MAX_DATE_MS = 8.64e15
 const iso = (ms: number) => new Date(ms).toISOString()
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
 const str = (v: unknown) => (typeof v === 'string' && v !== '' ? v : undefined)
